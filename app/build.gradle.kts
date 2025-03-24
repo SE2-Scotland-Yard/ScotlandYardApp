@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("jacoco")
-    id("org.sonarqube") version "5.1.0.4882"
+    id("org.sonarqube") version "6.0.1.5171"
 }
 
 android {
@@ -95,14 +95,9 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
 sonar {
     properties {
-        property("sonar.projectKey", "AAU-SE2_WebSocketBrokerDemo-App")
-        property("sonar.organization", "aau-se2")
+        property("sonar.projectKey", "SE2-Scotland-Yard_ScotlandYardBackend")
+        property("sonar.organization", "se2-scotland-yard")
         property("sonar.host.url", "https://sonarcloud.io")
-        property("sonar.java.coveragePlugin", "jacoco")
-        property(
-            "sonar.coverage.jacoco.xmlReportPaths",
-            "${project.projectDir}/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
-        )
     }
 }
 
