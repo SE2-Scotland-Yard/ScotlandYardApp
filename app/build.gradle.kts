@@ -98,6 +98,10 @@ sonar {
         property("sonar.projectKey", "SE2-Scotland-Yard_ScotlandYardBackend")
         property("sonar.organization", "se2-scotland-yard")
         property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.java.coveragePlugin", "jacoco")
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            "${project.projectDir}/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
     }
 }
 
