@@ -24,18 +24,18 @@
         android:id="@+id/hellobtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Send hello"
-        app:layout_constraintBottom_toTopOf="@+id/jsonbtn"
+        android:text="Send Message Hello"
+        app:layout_constraintBottom_toTopOf="@+id/disconnectbt"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/connectbtn" />
 
     <Button
-        android:id="@+id/jsonbtn"
+        android:id="@+id/disconnectbt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Send Json"
+        android:text="Disconnect"
         app:layout_constraintBottom_toTopOf="@+id/response_view"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
@@ -51,5 +51,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/jsonbtn" />
+        app:layout_constraintTop_toBottomOf="@+id/disconnectbt" />
 </androidx.constraintlayout.widget.ConstraintLayout>
