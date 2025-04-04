@@ -1,13 +1,16 @@
 package at.aau.serg.websocketbrokerdemo
 
 import WebSocketClient
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,8 +20,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 
 class MainActivity : ComponentActivity(), Callbacks {
     lateinit var client: WebSocketClient
@@ -53,8 +59,9 @@ class MainActivity : ComponentActivity(), Callbacks {
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
-
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(onClick = { client.connect() }) {
                 Text(text = "Connect")
@@ -66,6 +73,15 @@ class MainActivity : ComponentActivity(), Callbacks {
                 Text(text = "Disconnect")
             }
             Text(text = response)
+
+            Spacer(modifier = Modifier.size(16.dp))
+
+            Button(onClick = {
+                val intent = Intent(this@MainActivity, StartScreenActivity::class.java)
+                startActivity(intent)
+            }) {
+                Text(text = "Go to Start Screen")
+            }
 
         }
 
