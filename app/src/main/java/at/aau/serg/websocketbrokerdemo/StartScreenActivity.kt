@@ -27,11 +27,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
 
 
@@ -54,11 +58,11 @@ fun StartScreen() {
     ) {
 
         Image(
-            painter = painterResource(id = R.drawable.scotland_yard_logo_var_2),
-            contentDescription = "Scotland Yard Logo",
+            painter = painterResource(id = R.drawable.start_screen),
+            contentDescription = "Scotland Yard Start Screen",
+            contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(500.dp)
-                .align(Alignment.Center)
+                .fillMaxSize()
 
         )
         Column(
@@ -67,29 +71,45 @@ fun StartScreen() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ){
-            Row(
+            Column(
                 modifier = Modifier
-                    .offset(x = 0.dp, y = 120.dp)
+                    .offset(x = 180.dp, y = 90.dp)
             ){
                 Button(
                     onClick = { /*TODO*/ },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = colorResource(id = R.color.buttonBlue,)
-                    )
+                        containerColor = colorResource(id = R.color.buttonStartScreen,)
+                    ),
+                    modifier = Modifier
+                        .size(width = 150.dp, height = 50.dp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(12.dp),
+                            ambientColor = Color.Black,
+                            spotColor = Color.DarkGray
+                        )
                 ) {
 
-                    Text(text = "Start")
+                    Text(text = "Start" , fontSize = 20.sp)
                 }
 
-                Spacer(modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.size(25.dp))
 
                 Button(
                     onClick = { /*TODO*/ },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = colorResource(id = R.color.buttonBlue,)
-                    )
+                        containerColor = colorResource(id = R.color.buttonStartScreen,)
+                    ),
+                    modifier = Modifier
+                        .size(width = 150.dp, height = 50.dp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(12.dp),
+                            ambientColor = Color.Black,
+                            spotColor = Color.DarkGray
+                        )
                 ) {
-                    Text(text = "Options")
+                    Text(text = "Settings", fontSize = 20.sp)
                 }
             }
         }
