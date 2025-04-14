@@ -1,7 +1,7 @@
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import at.aau.serg.websocketbrokerdemo.Callbacks
+import at.aau.serg.websocketbrokerdemo.websocket.Callbacks
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
