@@ -1,5 +1,6 @@
 package at.aau.serg.websocketbrokerdemo
 
+import android.content.Intent
 import android.media.Image
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -34,9 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
+
 
 
 class StartScreenActivity : ComponentActivity() {
@@ -51,6 +54,7 @@ class StartScreenActivity : ComponentActivity() {
 
 @Composable
 fun StartScreen() {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -110,6 +114,29 @@ fun StartScreen() {
                         )
                 ) {
                     Text(text = "Settings", fontSize = 20.sp)
+                }
+
+                //Temporary Button
+                Spacer(modifier = Modifier.size(25.dp))
+
+                Button(
+                    onClick = {
+                        val intent = Intent(context, MapActivity::class.java)
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorResource(id = R.color.buttonStartScreen,)
+                    ),
+                    modifier = Modifier
+                        .size(width = 150.dp, height = 50.dp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = RoundedCornerShape(12.dp),
+                            ambientColor = Color.Black,
+                            spotColor = Color.DarkGray
+                        )
+                ) {
+                    Text(text = "To Map", fontSize = 20.sp)
                 }
             }
         }
