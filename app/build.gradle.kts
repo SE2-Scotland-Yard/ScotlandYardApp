@@ -30,11 +30,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -107,9 +107,7 @@ sonar {
 }
 
 dependencies {
-    implementation(libs.krossbow.websocket.okhttp)
-    implementation(libs.krossbow.stomp.core)
-    implementation(libs.krossbow.websocket.builtin)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -122,7 +120,14 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.retrofit)
     implementation(libs.converter.scalars)
+    implementation(libs.converter.gson)
+    implementation(libs.gson)
+    implementation(libs.androidx.lifecycle.runtime.ktx.v262)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation("androidx.compose.material3:material3:1.3.2")
     testImplementation(libs.junit)
+    implementation(libs.krossbow.stomp.core)
+    implementation(libs.krossbow.websocket.okhttp)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
     androidTestImplementation(libs.androidx.junit)

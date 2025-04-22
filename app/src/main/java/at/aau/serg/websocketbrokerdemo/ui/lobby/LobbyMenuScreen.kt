@@ -10,13 +10,15 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 
 @Composable
 fun LobbyMenuScreen(
-    onCreateLobby: () -> Unit,
+    onCreateLobby: (Boolean) -> Unit,
     onJoinLobby: () -> Unit,
     onFindPublicLobbies: () -> Unit,
     userSession: UserSessionViewModel
 ) {
 
+
     val username = userSession.username.value
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -24,12 +26,24 @@ fun LobbyMenuScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Willkommen, ${username}", style = MaterialTheme.typography.headlineMedium)
+        Text("Willkommen, $username", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Button(onClick = onCreateLobby, modifier = Modifier.fillMaxWidth()) {
-            Text("Lobby erstellen")
+        Button(
+            onClick = { onCreateLobby(true) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Öffentliche Lobby erstellen")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { onCreateLobby(false) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Private Lobby erstellen")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

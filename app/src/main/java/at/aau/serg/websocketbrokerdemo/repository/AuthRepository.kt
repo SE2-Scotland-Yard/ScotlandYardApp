@@ -12,10 +12,19 @@ class AuthRepository(
         .create(AuthApi::class.java)
 ) {
     suspend fun login(username: String, password: String): String {
-        return api.login(username, password)
+        return try {
+            api.login(username, password)
+        } catch (e: Exception) {
+            // Netzwerk‑ oder Serverfehler
+            "Server ist nicht erreichbar. Bitte versuche es später erneut."
+        }
     }
 
     suspend fun register(username: String, password: String): String {
-        return api.register(username, password)
+        return try {
+            api.register(username, password)
+        } catch (e: Exception) {
+            "Server ist nicht erreichbar. Bitte versuche es später erneut."
+        }
     }
 }
