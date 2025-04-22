@@ -77,6 +77,18 @@ class StompManager {
         }
     }
 
+    fun sendSelectedRole(gameId: String, player: String, role: String) {
+        val payload = Gson().toJson(mapOf(
+            "gameId" to gameId,
+            "playerId" to player,
+            "role" to role
+        ))
+        CoroutineScope(Dispatchers.IO).launch {
+            client.connect(WS_URL).sendText("/app/lobby/role", payload)
+        }
+    }
+
+
     /** 5) cancel + disconnect */
     fun disconnect() {
         sessionJob?.cancel()

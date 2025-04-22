@@ -73,6 +73,11 @@ class LobbyViewModel(
         }
     }
 
+    fun selectRole(gameId: String, player: String, role: String) {
+        stompManager.sendSelectedRole(gameId, player, role)
+    }
+
+
     fun leaveLobby(
         gameId: String,
         playerName: String,

@@ -20,10 +20,9 @@ fun LobbyScreen(
     onLeft: () -> Unit,
     onGameStarted: (String) -> Unit
 ) {
-    /* ---------- State ---------- */
     val lobbyState by lobbyVm.lobbyStatus.collectAsState()
-    val context      = LocalContext.current
-    var toastShown  by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var toastShown by remember { mutableStateOf(false) }
 
     LaunchedEffect(lobbyState?.isStarted) {
         if (lobbyState?.isStarted == true) {
@@ -31,8 +30,6 @@ fun LobbyScreen(
         }
     }
 
-
-    /* ---------- REST + WebSocket einrichten ---------- */
     LaunchedEffect(gameId) {
         lobbyVm.fetchLobbyStatus(gameId)
         lobbyVm.connectToLobby(
@@ -45,14 +42,7 @@ fun LobbyScreen(
             }
         )
     }
-    /* ---------- wenn alle ready sein auf GameScreen wechseln ---------- */
-    LaunchedEffect(lobbyState?.isStarted) {
-        if (lobbyState?.isStarted == true) {
-            onGameStarted(gameId)
-        }
-    }
 
-    /* ---------- UI ---------- */
     Scaffold(
         topBar = {
             TopAppBar(
@@ -72,34 +62,95 @@ fun LobbyScreen(
             )
         }
     ) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp)
-        ) {
-            lobbyState?.let { lobby ->
-                Text("Spieler in der Lobby:", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                lobby.players.forEach { p ->
-                    val ready = lobby.readyStatus[p] == true
-                    Text("• $p ${if (ready) "(bereit)" else "(wartet)"}")
+        lobbyState?.let { lobby ->
+            val currentPlayer = userSessionVm.username.value.orEmpty()
+            val currentRole = lobby.selectedRoles[currentPlayer]
+            val mrXTaken = lobby.selectedRoles.any { it.value == "MRX" && it.key != currentPlayer }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    Text("Spieler in der Lobby:", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+
+                    lobby.players.forEach { p ->
+                        val ready = lobby.readyStatus[p] == true
+                        val role = lobby.selectedRoles[p] ?: "unbekannt"
+                        Text("• $p - Rolle: $role ${if (ready) "(bereit)" else "(wartet)"}")
+                    }
                 }
-                Spacer(Modifier.height(24.dp))
-                if (!lobby.isStarted) {
-                    Button(
-                        onClick = {
-                            val player = userSessionVm.username.value.orEmpty()
-                            lobbyVm.sendReady(gameId, player)
+
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 24.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Wähle deine Rolle:", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Button(
+                            onClick = { lobbyVm.selectRole(gameId, currentPlayer, "MRX") },
+                            enabled = !mrXTaken && !lobby.isStarted
+                        ) {
+                            Text("MrX")
                         }
-                    ) { Text("Bereit") }
-                } else {
-                    Text("Das Spiel hat begonnen!", color = MaterialTheme.colorScheme.primary)
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Button(
+                            onClick = { lobbyVm.selectRole(gameId, currentPlayer, "DETECTIVE") },
+                            enabled = !lobby.isStarted
+                        ) {
+                            Text("Detective")
+                        }
+                    }
+
+                    currentRole?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Deine aktuelle Rolle: $it")
+                    }
+
+                    if (mrXTaken && currentRole != "MRX") {
+                        Text(
+                            text = "MrX ist bereits vergeben",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+                    if (!lobby.isStarted) {
+                        Button(
+                            onClick = {
+                                lobbyVm.sendReady(gameId, currentPlayer)
+                            }
+                        ) {
+                            Text("Bereit")
+                        }
+                    } else {
+                        Text("Das Spiel hat begonnen!", color = MaterialTheme.colorScheme.primary)
+                    }
                 }
-            } ?: Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
+            }
+        } ?: Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
         }
     }
 }
