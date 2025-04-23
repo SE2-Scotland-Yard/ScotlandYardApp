@@ -46,14 +46,14 @@ class LobbyViewModel(
     /**
      * 3) Lobby per REST beitreten → danach WS aufbauen
      */
-    fun joinLobby(gameId: String, playerName: String) = viewModelScope.launch {
-        runCatching {
-            repository.joinLobby(gameId, playerName)
-        }.onSuccess {
-            fetchLobbyStatus(gameId)
-            connectToLobby(gameId) { /* optional onConnected */ }
-        }.onFailure { it.printStackTrace() }
+    suspend fun tryJoinLobby(gameId: String, playerName: String): Result<String> {
+        return repository.joinLobby(gameId, playerName)
+            .onSuccess {
+                fetchLobbyStatus(gameId)
+                connectToLobby(gameId) { }
+            }
     }
+
 
     /**
      * 4) WebSocket + STOMP verbinden und Updates einsammeln

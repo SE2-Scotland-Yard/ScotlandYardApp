@@ -1,23 +1,31 @@
 package at.aau.serg.websocketbrokerdemo
 
-import GameScreen
+
+import android.widget.Toast
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import at.aau.serg.websocketbrokerdemo.ui.auth.AuthScreen
+import at.aau.serg.websocketbrokerdemo.ui.game.GameScreen
+
 import at.aau.serg.websocketbrokerdemo.ui.lobby.*
 import at.aau.serg.websocketbrokerdemo.ui.start.StartScreen
 import at.aau.serg.websocketbrokerdemo.viewmodel.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation() {
 
-
     val nav   = rememberNavController()
     val user  : UserSessionViewModel = viewModel()
     val lobby : LobbyViewModel       = viewModel()
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current //
 
     NavHost(nav, startDestination = AppRoutes.START) {
 
@@ -28,6 +36,8 @@ fun AppNavigation() {
                 onRegisterClick = { nav.navigate("auth?mode=register") }
             )
         }
+
+
 
         /* ---------- Auth ---------- */
         composable(
@@ -47,8 +57,6 @@ fun AppNavigation() {
 
         /* ---------- Menü ---------- */
         composable(AppRoutes.MENU) {
-
-            /* Direkt nach dem Erzeugen einer Lobby dorthin springen */
             val created by lobby.createdLobby.collectAsState()
             LaunchedEffect(created) {
                 created?.let { nav.navigate(AppRoutes.lobby(it.gameId)) }
@@ -64,23 +72,43 @@ fun AppNavigation() {
 
         /* ---------- Join ---------- */
         composable(AppRoutes.JOIN) {
+            val coroutineScope = rememberCoroutineScope()
+            val snackbarHostState = remember { SnackbarHostState() }
+
             JoinLobbyScreen(
                 onJoin = { id ->
-                    lobby.joinLobby(id, user.username.value.orEmpty())
-                    nav.navigate(AppRoutes.lobby(id))
+                    coroutineScope.launch {
+                        val result = lobby.tryJoinLobby(id, user.username.value.orEmpty())
+                        result.onSuccess {
+                            nav.navigate(AppRoutes.lobby(id))
+                        }.onFailure {
+                            Toast.makeText(context, it.message ?: "Beitritt fehlgeschlagen", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
-                onBack = { nav.popBackStack() }
+                onBack = { nav.popBackStack() },
+                snackbarHostState = snackbarHostState
             )
         }
 
         /* ---------- Öffentliche Lobbys ---------- */
         composable(AppRoutes.PUBLIC) {
+            val coroutineScope = rememberCoroutineScope()
+            val snackbarHostState = remember { SnackbarHostState() }
+
             PublicLobbiesScreen(
                 onSelect = { id ->
-                    lobby.joinLobby(id, user.username.value.orEmpty())
-                    nav.navigate(AppRoutes.lobby(id))
+                    coroutineScope.launch {
+                        val result = lobby.tryJoinLobby(id, user.username.value.orEmpty())
+                        result.onSuccess {
+                            nav.navigate(AppRoutes.lobby(id))
+                        }.onFailure {
+                            Toast.makeText(context, it.message ?: "Beitritt fehlgeschlagen", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
-                onBack = { nav.popBackStack() }
+                onBack = { nav.popBackStack() },
+                snackbarHostState = snackbarHostState
             )
         }
 
@@ -107,7 +135,6 @@ fun AppNavigation() {
                     }
                 }
             )
-
         }
 
         /* ---------- Live‑Game ---------- */
@@ -129,7 +156,6 @@ fun AppNavigation() {
                 }
             )
         }
-
 
     }
 }

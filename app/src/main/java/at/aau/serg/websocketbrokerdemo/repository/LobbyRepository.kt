@@ -15,9 +15,22 @@ class LobbyRepository(
         return api.createLobby(isPublic,name)
     }
 
-    suspend fun joinLobby(gameId: String, playerName: String): String {
-        return api.joinLobby(gameId, playerName)
+    suspend fun joinLobby(gameId: String, playerName: String): Result<String> {
+        return try {
+            val response = api.joinLobby(gameId, playerName)
+            if (response.isSuccessful) {
+                val bodyText = response.body()?.string() ?: "Beigetreten"
+                Result.success(bodyText)
+            } else {
+                val errorText = response.errorBody()?.string() ?: "Unbekannter Fehler"
+                Result.failure(Exception(errorText))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
+
+
 
     suspend fun leaveLobby(gameId: String, name: String): String {
         return api.leaveLobby(gameId, name)

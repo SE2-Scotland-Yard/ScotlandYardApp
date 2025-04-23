@@ -6,13 +6,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -21,7 +19,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun PublicLobbiesScreen(
     onSelect: (String) -> Unit,
     onBack: () -> Unit,
-    lobbyViewModel: LobbyViewModel = viewModel()
+    lobbyViewModel: LobbyViewModel = viewModel(),
+    snackbarHostState: SnackbarHostState
 ) {
 
     val lobbies by lobbyViewModel.publicLobbies.collectAsState(initial = emptyList())
@@ -45,7 +44,8 @@ fun PublicLobbiesScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         if (lobbies.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {

@@ -13,6 +13,8 @@ object AppRoutes {
     const val GAME   = "game/{id}"
 
 
+
+
     fun lobby(id: String) = "lobby/$id"
     fun game(id: String) = "game/$id"
 }

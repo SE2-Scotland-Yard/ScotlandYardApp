@@ -37,7 +37,7 @@ fun StartScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(end = 160.dp, bottom = 32.dp), // 👈 nach links verschoben
+                .padding(end = 160.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.End
         ) {

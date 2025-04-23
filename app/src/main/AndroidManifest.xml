@@ -15,20 +15,7 @@
         android:theme="@style/Theme.MyApplication"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
-        <activity
-            android:name="at.aau.serg.websocketbrokerdemo.MapActivity"
-            android:exported="false"
-            android:label="@string/title_activity_map_screen"
-            android:theme="@style/Theme.MyApplication"
-            android:screenOrientation="landscape"
-            android:configChanges="orientation|screenSize"/>
-        <activity
-            android:name="at.aau.serg.websocketbrokerdemo.StartScreenActivity"
-            android:exported="false"
-            android:label="@string/title_activity_start_screen"
-            android:theme="@style/Theme.MyApplication"
-            android:screenOrientation="landscape"
-            android:configChanges="orientation|screenSize"/>
+
         <activity
             android:name="at.aau.serg.websocketbrokerdemo.MainActivity"
             android:configChanges="orientation|screenSize"
