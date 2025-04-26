@@ -81,25 +81,11 @@ fun MapScreen() {
         }
 
 
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(color = Color.Black)
         ) {
-            val maxWidth = constraints.maxWidth.toFloat()
-            val maxHeight = constraints.maxHeight.toFloat()
-
-            val imageWidth = maxWidth
-            val imageHeight = maxHeight
-
-            fun clampOffsets(x: Float, y: Float): Pair<Float, Float> {
-                val maxX = (imageWidth * (scale - 1)) / 2
-                val maxY = (imageHeight * (scale - 1)) / 2
-                val clampedX = x.coerceIn(-maxX, maxX)
-                val clampedY = y.coerceIn(-maxY, maxY)
-                return Pair(clampedX, clampedY)
-            }
-
             Image(
                 painter = painterResource(id = R.drawable.map),
                 contentDescription = "Scotland Yard Map",
@@ -114,15 +100,11 @@ fun MapScreen() {
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(1f, 5f)
-                            val newX = offsetX + pan.x
-                            val newY = offsetY + pan.y
-                            val (clampedX, clampedY) = clampOffsets(newX, newY)
-                            offsetX = clampedX
-                            offsetY = clampedY
+                            offsetX += pan.x
+                            offsetY += pan.y
                         }
                     }
             )
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()
