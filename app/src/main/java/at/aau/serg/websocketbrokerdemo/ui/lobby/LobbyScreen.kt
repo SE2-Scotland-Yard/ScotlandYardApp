@@ -18,7 +18,8 @@ fun LobbyScreen(
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
     onLeft: () -> Unit,
-    onGameStarted: (String) -> Unit
+    onGameStarted: (String) -> Unit,
+
 ) {
     val lobbyState by lobbyVm.lobbyStatus.collectAsState()
     val context = LocalContext.current

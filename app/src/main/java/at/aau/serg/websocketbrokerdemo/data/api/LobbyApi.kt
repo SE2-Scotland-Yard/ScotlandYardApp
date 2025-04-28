@@ -1,5 +1,6 @@
 package at.aau.serg.websocketbrokerdemo.data.api
 
+import at.aau.serg.websocketbrokerdemo.data.model.JoinResponse
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import retrofit2.http.*
 
@@ -15,7 +16,7 @@ interface LobbyApi {
     suspend fun joinLobby(
         @Path("gameId") gameId: String,
         @Query("name") playerName: String
-    ): String
+    ): JoinResponse
 
     @POST("api/lobby/{gameId}/leave")
     suspend fun leaveLobby(

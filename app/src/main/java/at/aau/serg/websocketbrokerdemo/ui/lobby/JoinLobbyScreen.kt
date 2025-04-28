@@ -13,7 +13,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun JoinLobbyScreen(
     onJoin: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     var gameId by remember { mutableStateOf("") }
 
@@ -56,3 +57,4 @@ fun JoinLobbyScreen(
         }
     }
 }
+

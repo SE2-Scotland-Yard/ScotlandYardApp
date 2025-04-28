@@ -1,4 +1,4 @@
-package at.aau.serg.websocketbrokerdemo.ui.auth
+package at.aau.serg.websocketbrokerdemo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

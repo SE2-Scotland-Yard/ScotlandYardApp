@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import at.aau.serg.websocketbrokerdemo.viewmodel.AuthViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 
 
@@ -78,7 +79,7 @@ fun AuthScreen(mode: String = "login", onSuccess: () -> Unit = {},onBack: () -> 
                 Log.d("AuthButton", if (isLogin) "Login-Button geklickt" else "Register-Button geklickt")
                 if (isLogin) {
                     authViewModel.login(username, password) { result ->
-                        feedback = result.trim() // Trim zur Sicherheit
+                        feedback = result.trim()
                         Toast.makeText(context, feedback, Toast.LENGTH_SHORT).show()
                         if (feedback.equals("Login successful", ignoreCase = true)) {
                             userSession.username.value = username

@@ -46,14 +46,30 @@ class LobbyViewModel(
     /**
      * 3) Lobby per REST beitreten → danach WS aufbauen
      */
-    fun joinLobby(gameId: String, playerName: String) = viewModelScope.launch {
-        runCatching {
-            repository.joinLobby(gameId, playerName)
-        }.onSuccess {
+    suspend fun tryJoinLobby(gameId: String, playerName: String): String {
+        return runCatching {
+            println("Versuche Lobby beizutreten: gameId=$gameId, playerName=$playerName")
+
+            val joinResponse = repository.joinLobby(gameId, playerName)
+            println("Beitritt erfolgreich, Antwort: ${joinResponse.message}")
+
             fetchLobbyStatus(gameId)
-            connectToLobby(gameId) { /* optional onConnected */ }
-        }.onFailure { it.printStackTrace() }
+            connectToLobby(gameId)
+
+            joinResponse.message
+        }.getOrElse {
+            println("Fehler beim Beitritt: ${it.message}")
+            it.printStackTrace()
+            ""
+        }
     }
+
+
+
+
+
+
+
 
     /**
      * 4) WebSocket + STOMP verbinden und Updates einsammeln
@@ -67,7 +83,7 @@ class LobbyViewModel(
             onConnected = onConnected,
             onUpdate    = { lobby -> _lobbyStatus.value = lobby }
         )
-        // zusätzlicher Collector, falls gewünscht
+
         viewModelScope.launch {
             stompManager.lobbyUpdates.collectLatest { _lobbyStatus.value = it }
         }

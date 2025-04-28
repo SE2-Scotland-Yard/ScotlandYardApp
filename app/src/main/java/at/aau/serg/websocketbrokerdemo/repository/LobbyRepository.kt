@@ -1,4 +1,5 @@
 import at.aau.serg.websocketbrokerdemo.data.api.LobbyApi
+import at.aau.serg.websocketbrokerdemo.data.model.JoinResponse
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -15,9 +16,11 @@ class LobbyRepository(
         return api.createLobby(isPublic,name)
     }
 
-    suspend fun joinLobby(gameId: String, playerName: String): String {
+    suspend fun joinLobby(gameId: String, playerName: String): JoinResponse {
         return api.joinLobby(gameId, playerName)
     }
+
+
 
     suspend fun leaveLobby(gameId: String, name: String): String {
         return api.leaveLobby(gameId, name)

@@ -21,7 +21,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun PublicLobbiesScreen(
     onSelect: (String) -> Unit,
     onBack: () -> Unit,
-    lobbyViewModel: LobbyViewModel = viewModel()
+    lobbyViewModel: LobbyViewModel = viewModel(),
+    snackbarHostState: SnackbarHostState
 ) {
 
     val lobbies by lobbyViewModel.publicLobbies.collectAsState(initial = emptyList())

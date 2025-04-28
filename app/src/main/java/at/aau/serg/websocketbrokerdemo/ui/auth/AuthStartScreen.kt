@@ -1,4 +1,4 @@
-package at.aau.serg.websocketbrokerdemo.ui.start
+package at.aau.serg.websocketbrokerdemo.ui.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
 
 @Composable
-fun StartScreen(
+fun AuthStartScreen(
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit
 ) {
@@ -69,6 +69,5 @@ fun StartScreen(
                 Text("Registrieren", fontSize = 18.sp)
             }
         }
-
     }
 }
