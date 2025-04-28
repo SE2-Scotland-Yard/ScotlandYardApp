@@ -4,7 +4,12 @@ package at.aau.serg.websocketbrokerdemo.ui.game
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,13 +28,7 @@ import com.example.myapplication.R
 
 
 @Composable
-fun GameScreen(
-    gameId: String,
-    userSessionVm: UserSessionViewModel,
-    lobbyVm: LobbyViewModel,
-    onLeft: () -> Unit
-) {
-
+fun MapScreen(useSmallMap: Boolean = false) {
     var scale by remember { mutableStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
@@ -60,27 +59,14 @@ fun GameScreen(
             }
         }
 
-        BoxWithConstraints(
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            val maxWidth = constraints.maxWidth.toFloat()
-            val maxHeight = constraints.maxHeight.toFloat()
-
-            val imageWidth = maxWidth
-            val imageHeight = maxHeight
-
-            fun clampOffsets(x: Float, y: Float): Pair<Float, Float> {
-                val maxX = (imageWidth * (scale - 1)) / 2
-                val maxY = (imageHeight * (scale - 1)) / 2
-                val clampedX = x.coerceIn(-maxX, maxX)
-                val clampedY = y.coerceIn(-maxY, maxY)
-                return Pair(clampedX, clampedY)
-            }
-
             Image(
-                painter = painterResource(id = R.drawable.map),
+                painter = painterResource(id = if (useSmallMap) R.drawable.map_small  else R.drawable.map),
                 contentDescription = "Scotland Yard Map",
                 modifier = Modifier
                     .fillMaxSize()
@@ -93,15 +79,11 @@ fun GameScreen(
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(1f, 5f)
-                            val newX = offsetX + pan.x
-                            val newY = offsetY + pan.y
-                            val (clampedX, clampedY) = clampOffsets(newX, newY)
-                            offsetX = clampedX
-                            offsetY = clampedY
+                            offsetX += pan.x
+                            offsetY += pan.y
                         }
                     }
             )
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()
