@@ -1,4 +1,4 @@
-package at.aau.serg.websocketbrokerdemo
+package at.aau.serg.websocketbrokerdemo.websocket
 
 interface Callbacks {
     fun onResponse(res:String);
