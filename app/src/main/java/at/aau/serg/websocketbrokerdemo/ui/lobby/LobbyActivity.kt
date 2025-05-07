@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import at.aau.serg.websocketbrokerdemo.ui.game.GameActivity
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import kotlinx.coroutines.launch
@@ -103,7 +104,8 @@ class LobbyActivity : ComponentActivity() {
                         userSessionVm = userSessionVm,
                         onLeft = { currentScreen = LobbyScreenType.Menu },
                         onGameStarted = { startedGameId ->
-                            // TODO: GameActivity starten
+                            startActivity(GameActivity.createIntent(this@LobbyActivity))
+                            finish()
                         }
                     )
                 }
