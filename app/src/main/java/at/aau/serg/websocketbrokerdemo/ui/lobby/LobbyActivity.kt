@@ -65,7 +65,11 @@ class LobbyActivity : ComponentActivity() {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live
                                 } else {
-                                    Toast.makeText(this@LobbyActivity, "Beitritt fehlgeschlagen", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        this@LobbyActivity,
+                                        "Beitritt fehlgeschlagen",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                         },
@@ -87,7 +91,11 @@ class LobbyActivity : ComponentActivity() {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live
                                 } else {
-                                    Toast.makeText(this@LobbyActivity, "Beitritt fehlgeschlagen", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        this@LobbyActivity,
+                                        "Beitritt fehlgeschlagen",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                         },
@@ -103,10 +111,20 @@ class LobbyActivity : ComponentActivity() {
                         lobbyVm = lobbyVm,
                         userSessionVm = userSessionVm,
                         onLeft = { currentScreen = LobbyScreenType.Menu },
-                        onGameStarted = { startedGameId ->
-                            startActivity(GameActivity.createIntent(this@LobbyActivity))
-                            finish()
+                        onGameStarted = {
+                            currentScreen = LobbyScreenType.Game
                         }
+                    )
+                }
+
+
+                LobbyScreenType.Game -> selectedGameId?.let { id ->
+                    GameScreen(
+                        gameId = id,
+                        lobbyVm = lobbyVm,
+                        userSessionVm = userSessionVm
+
+
                     )
                 }
             }
