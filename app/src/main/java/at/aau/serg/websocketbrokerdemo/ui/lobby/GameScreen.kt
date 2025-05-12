@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
+import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,6 +23,7 @@ fun GameScreen(
     val gameUpdate by lobbyVm.gameState.collectAsState()
     val message by remember { derivedStateOf { gameVm.message } }
     val allowedMoves by remember { derivedStateOf { gameVm.allowedMoves } }
+    val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails }}
     val error by remember { derivedStateOf { gameVm.errorMessage } }
 
     var expanded by remember { mutableStateOf(false) }
@@ -97,14 +99,21 @@ fun GameScreen(
                             Text(selectedMove?.let { "Feld $it gewählt" } ?: "Zugziel wählen")
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            allowedMoves.forEach { pos ->
+                            if (allowedMoves.isEmpty()) {
                                 DropdownMenuItem(
-                                    text = { Text("Feld $pos") },
-                                    onClick = {
-                                        selectedMove = pos
-                                        expanded = false
-                                    }
+                                    text = { Text("Keine Züge verfügbar") },
+                                    onClick = { expanded = false }
                                 )
+                            } else {
+                                allowedMoves.forEach { move ->
+                                    DropdownMenuItem(
+                                        text = { Text("${move.moveType} (Ticket #${move.ticketId})") },
+                                        onClick = {
+                                            selectedMove = move.ticketId  // Ausgewählte ticketId speichern
+                                            expanded = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

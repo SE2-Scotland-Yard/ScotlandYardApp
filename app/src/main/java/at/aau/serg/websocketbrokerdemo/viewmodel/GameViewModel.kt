@@ -3,6 +3,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import kotlinx.coroutines.launch
 
@@ -13,8 +14,12 @@ class GameViewModel(
     var message by mutableStateOf("")
         private set
 
-    var allowedMoves by mutableStateOf<List<Int>>(emptyList())
-        private set
+
+
+
+    var allowedMovesDetails:AllowedMoveResponse? by mutableStateOf(null)
+
+    var allowedMoves: List<AllowedMoveResponse> by mutableStateOf(emptyList())
 
     var errorMessage by mutableStateOf<String?>(null)
         private set
@@ -33,9 +38,8 @@ class GameViewModel(
         viewModelScope.launch {
             try {
                 allowedMoves = repository.getAllowedMoves(gameId, name)
-                errorMessage = null
             } catch (e: Exception) {
-                errorMessage = e.message
+                errorMessage = "Fehler: ${e.message}"
             }
         }
     }

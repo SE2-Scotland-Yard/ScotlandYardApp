@@ -1,6 +1,7 @@
 package at.aau.serg.websocketbrokerdemo.data.api
 
 import androidx.annotation.IntegerRes
+import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.JoinResponse
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
@@ -23,7 +24,7 @@ interface GameApi {
     suspend fun getAllowedMoves(
         @Query("gameId") gameId: String,
         @Query("name") name: String
-    ): List<Int>
+    ): List<AllowedMoveResponse>
 
 
 }
