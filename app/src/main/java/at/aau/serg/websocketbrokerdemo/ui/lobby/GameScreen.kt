@@ -1,12 +1,12 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
+import GameViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import at.aau.serg.websocketbrokerdemo.viewmodel.GameViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 
@@ -20,6 +20,16 @@ fun GameScreen(
 ) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
+    val message = gameVm.message
+    val allowedMoves = gameVm.allowedMoves
+    val error = gameVm.errorMessage
+
+
+    LaunchedEffect(gameId, username) {
+        if (username != null) {
+            gameVm.fetchAllowedMoves(gameId, username)
+        }
+    }
 
 
     Scaffold(
@@ -55,6 +65,15 @@ fun GameScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
+            Text("Erlaubte Züge:", style = MaterialTheme.typography.titleMedium)
+            if (error != null) {
+                Text("Fehler: $error", color = MaterialTheme.colorScheme.error)
+            } else {
+                allowedMoves.forEach { pos ->
+                    Text("→ Feld $pos")
+                }
+            }
+
             Button(
                 onClick = {
                     username?.let {
@@ -64,6 +83,10 @@ fun GameScreen(
 
             ) {
                 Text("MOVE")
+            }
+
+            if (message.isNotEmpty()) {
+                Text("Serverantwort: $message")
             }
         }
     }

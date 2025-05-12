@@ -15,7 +15,14 @@ interface GameApi {
         @Query("gameId") gameId: String,
         @Query("name")     name: String,
         @Query("to") to: Int,
-        @Query("ticket")     ticket: String
+        @Query("ticket")     gotTicket: String
     ): String
+
+    @GET("api/game/allowedMoves")
+    suspend fun getAllowedMoves(
+        @Query("gameId") gameId: String,
+        @Query("name") name: String
+    ): List<Int>
+
 
 }

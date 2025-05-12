@@ -1,5 +1,6 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
+import GameViewModel
 import LobbyScreenType
 import android.content.Context
 import android.content.Intent
@@ -11,7 +12,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import at.aau.serg.websocketbrokerdemo.ui.game.GameActivity
-import at.aau.serg.websocketbrokerdemo.viewmodel.GameViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import kotlinx.coroutines.launch

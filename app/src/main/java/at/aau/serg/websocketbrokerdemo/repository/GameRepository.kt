@@ -15,8 +15,13 @@ class GameRepository (
         .create(GameApi::class.java)
     )
     {
-        suspend fun move(gameId: String, name: String, to: Int, ticket: String): String {
-            return api.move(gameId, name, to, ticket)
+        suspend fun move(gameId: String, name: String, to: Int, gotTicket: String): String {
+            return api.move(gameId, name, to, gotTicket)
 
         }
+
+        suspend fun getAllowedMoves(gameId: String, name: String): List<Int> {
+            return api.getAllowedMoves(gameId, name)
+        }
+
     }
