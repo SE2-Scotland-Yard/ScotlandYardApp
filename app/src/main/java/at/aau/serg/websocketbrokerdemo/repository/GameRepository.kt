@@ -20,7 +20,7 @@ class GameRepository (
 
         }
 
-        suspend fun getAllowedMoves(gameId: String, name: String): List<Int> {
+        suspend fun getAllowedMoves(gameId: String, name: String): List<Pair<Int, String>> {
             return api.getAllowedMoves(gameId, name)
         }
 

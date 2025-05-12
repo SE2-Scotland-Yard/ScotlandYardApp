@@ -22,7 +22,7 @@ interface GameApi {
     suspend fun getAllowedMoves(
         @Query("gameId") gameId: String,
         @Query("name") name: String
-    ): List<Int>
+    ): List<Pair<Int, String>>
 
 
 }

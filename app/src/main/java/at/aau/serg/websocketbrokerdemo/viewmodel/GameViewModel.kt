@@ -10,22 +10,28 @@ class GameViewModel(
     private val repository: GameRepository = GameRepository()
 ) : ViewModel() {
 
+    // Speichert die kompletten Bewegungsdaten (Zielposition + Transportmittel)
+    var allowedMoves by mutableStateOf<List<Pair<Int, String>>>(emptyList())
+        private set
+
+    // Nur die Zielpositionen (falls du sie separat brauchst)
+    val allowedMovePositions: List<Int>
+        get() = allowedMoves.map { it.first }
+
     var message by mutableStateOf("")
         private set
 
-    var allowedMoves by mutableStateOf<List<Int>>(emptyList())
-        private set
 
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
     fun move(gameId: String, name: String, to: Int, gotTicket: String) {
-       viewModelScope.launch {
-           try {
-               message = repository.move(gameId, name, to, gotTicket)
-           }catch (e:Exception){
-               errorMessage = e.message
-           }
+        viewModelScope.launch {
+            try {
+                message = repository.move(gameId, name, to, gotTicket)
+            } catch (e: Exception) {
+                errorMessage = e.message
+            }
         }
     }
 
@@ -36,6 +42,7 @@ class GameViewModel(
                 errorMessage = null
             } catch (e: Exception) {
                 errorMessage = e.message
+                allowedMoves = emptyList()
             }
         }
     }
