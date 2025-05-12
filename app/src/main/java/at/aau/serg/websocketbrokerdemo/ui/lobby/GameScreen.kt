@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import at.aau.serg.websocketbrokerdemo.viewmodel.GameViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 
@@ -14,11 +15,11 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 fun GameScreen(
     gameId: String,
     lobbyVm: LobbyViewModel,
-    userSessionVm: UserSessionViewModel
+    userSessionVm: UserSessionViewModel,
+    gameVm:GameViewModel
 ) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
-
 
 
     Scaffold(
@@ -51,6 +52,18 @@ fun GameScreen(
             myPosition?.let {
                 Spacer(Modifier.height(16.dp))
                 Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(16.dp))
+            }
+
+            Button(
+                onClick = {
+                    username?.let {
+                        gameVm.move(gameId, it, 1, "TAXI")
+                    }
+                },
+
+            ) {
+                Text("MOVE")
             }
         }
     }
