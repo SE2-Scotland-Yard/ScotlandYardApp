@@ -16,8 +16,7 @@ class GameRepository (
     )
     {
         suspend fun move(gameId: String, name: String, to: Int, gotTicket: String): String {
-            return api.move(gameId, name, to, gotTicket)
-
+            return api.move(gameId, name, to, gotTicket).message
         }
 
         suspend fun getAllowedMoves(gameId: String, name: String): List<Int> {

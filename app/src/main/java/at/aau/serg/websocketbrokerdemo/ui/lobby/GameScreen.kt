@@ -16,78 +16,116 @@ fun GameScreen(
     gameId: String,
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
-    gameVm:GameViewModel
+    gameVm: GameViewModel
 ) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
-    val message = gameVm.message
-    val allowedMoves = gameVm.allowedMoves
-    val error = gameVm.errorMessage
+    val message by remember { derivedStateOf { gameVm.message } }
+    val allowedMoves by remember { derivedStateOf { gameVm.allowedMoves } }
+    val error by remember { derivedStateOf { gameVm.errorMessage } }
 
+    var expanded by remember { mutableStateOf(false) }
+    var selectedMove by remember { mutableStateOf<Int?>(null) }
 
+    // Moves nach dem Join laden
     LaunchedEffect(gameId, username) {
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
         }
     }
 
-
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Game $gameId") }
-            )
+            TopAppBar(title = { Text("Game $gameId") })
         }
     ) { padding ->
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp)
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            username?.let {
-                Text("Eingeloggt als: $it", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
-            }
+            // Linke Seite: Spielerstatus
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                username?.let {
+                    Text("Eingeloggt als: $it", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(16.dp))
+                }
 
-            Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
+                Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(8.dp))
 
-            gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                Text("$name steht auf Feld $pos")
-                Spacer(Modifier.height(4.dp))
-            }
+                gameUpdate?.playerPositions?.forEach { (name, pos) ->
+                    Text("$name steht auf Feld $pos")
+                    Spacer(Modifier.height(4.dp))
+                }
 
-            val myPosition = gameUpdate?.playerPositions?.get(username)
-            myPosition?.let {
-                Spacer(Modifier.height(16.dp))
-                Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
-            }
+                val myPosition = gameUpdate?.playerPositions?.get(username)
+                myPosition?.let {
+                    Spacer(Modifier.height(16.dp))
+                    Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(16.dp))
+                }
 
-            Text("Erlaubte Züge:", style = MaterialTheme.typography.titleMedium)
-            if (error != null) {
-                Text("Fehler: $error", color = MaterialTheme.colorScheme.error)
-            } else {
-                allowedMoves.forEach { pos ->
-                    Text("→ Feld $pos")
+                // Hier wird die Nachricht angezeigt
+                if (message.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(message, color = MaterialTheme.colorScheme.primary)
                 }
             }
 
-            Button(
-                onClick = {
-                    username?.let {
-                        gameVm.move(gameId, it, 1, "TAXI")
-                    }
-                },
+            Spacer(Modifier.width(24.dp)) // Abstand
 
+            // Rechte Seite: Auswahl & Bewegung
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             ) {
-                Text("MOVE")
-            }
+                Text("Erlaubte Züge:", style = MaterialTheme.typography.titleMedium)
 
-            if (message.isNotEmpty()) {
-                Text("Serverantwort: $message")
+                if (error != null) {
+                    Text("Fehler: $error", color = MaterialTheme.colorScheme.error)
+                } else {
+                    Box {
+                        Button(onClick = { expanded = true }) {
+                            Text(selectedMove?.let { "Feld $it gewählt" } ?: "Zugziel wählen")
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            allowedMoves.forEach { pos ->
+                                DropdownMenuItem(
+                                    text = { Text("Feld $pos") },
+                                    onClick = {
+                                        selectedMove = pos
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    selectedMove?.let {
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                username?.let { name ->
+                                    gameVm.move(gameId, name, it, "TAXI")
+                                }
+                            }
+                        ) {
+                            Text("MOVE zu Feld $it")
+                        }
+                    }
+                }
             }
         }
     }
 }
+
+
+

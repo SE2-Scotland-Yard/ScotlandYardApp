@@ -3,6 +3,7 @@ package at.aau.serg.websocketbrokerdemo.data.api
 import androidx.annotation.IntegerRes
 import at.aau.serg.websocketbrokerdemo.data.model.JoinResponse
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
+import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -15,8 +16,8 @@ interface GameApi {
         @Query("gameId") gameId: String,
         @Query("name")     name: String,
         @Query("to") to: Int,
-        @Query("ticket")     gotTicket: String
-    ): String
+        @Query("gotTicket")     gotTicket: String
+    ): MoveResponse
 
     @GET("api/game/allowedMoves")
     suspend fun getAllowedMoves(
