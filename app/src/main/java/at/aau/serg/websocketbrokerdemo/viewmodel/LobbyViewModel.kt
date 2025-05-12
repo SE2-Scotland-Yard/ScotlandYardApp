@@ -3,6 +3,7 @@ package at.aau.serg.websocketbrokerdemo.viewmodel
 import LobbyRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,11 @@ class LobbyViewModel(
     val publicLobbies = _publicLobbies.asStateFlow()
 
     private val stompManager = StompManager()
+
+    private val _gameState = MutableStateFlow<GameUpdate?>(null)
+    val gameState = _gameState.asStateFlow()
+
+    var alreadyConnected = false
 
     /** 1) neue Lobby erstellen */
     fun createLobby(isPublic: Boolean, creatorName: String) = viewModelScope.launch {
@@ -78,16 +84,28 @@ class LobbyViewModel(
         gameId: String,
         onConnected: () -> Unit = {}
     ) {
-        stompManager.connectToLobby(
+
+        if (alreadyConnected) return
+
+        stompManager.connectToAllTopics(
             gameId,
             onConnected = onConnected,
-            onUpdate    = { lobby -> _lobbyStatus.value = lobby }
+            onLobbyUpdate = { lobby -> _lobbyStatus.value = lobby }
         )
 
         viewModelScope.launch {
             stompManager.lobbyUpdates.collectLatest { _lobbyStatus.value = it }
         }
+
+        viewModelScope.launch {
+            stompManager.gameUpdates.collectLatest { _gameState.value = it }
+        }
+
+        alreadyConnected = true
     }
+
+
+
 
     fun selectRole(gameId: String, player: String, role: String) {
         stompManager.sendSelectedRole(gameId, player, role)
