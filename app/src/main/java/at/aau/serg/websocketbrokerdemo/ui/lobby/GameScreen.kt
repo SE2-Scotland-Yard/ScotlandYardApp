@@ -106,10 +106,12 @@ fun GameScreen(
                                 )
                             } else {
                                 allowedMoves.forEach { move ->
+                                    val ticketId = move.keys.first()
+                                    val ticketType = move.values.first()
                                     DropdownMenuItem(
-                                        text = { Text("${move.moveType} (Ticket #${move.ticketId})") },
+                                        text = { Text("$ticketType (Ticket #$ticketId)") },
                                         onClick = {
-                                            selectedMove = move.ticketId  // Ausgewählte ticketId speichern
+                                            selectedMove = ticketId  // Ausgewählte ticketId speichern
                                             expanded = false
                                         }
                                     )
