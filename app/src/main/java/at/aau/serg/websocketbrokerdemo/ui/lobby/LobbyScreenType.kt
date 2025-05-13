@@ -2,5 +2,6 @@ enum class LobbyScreenType {
     Menu,
     Join,
     Public,
-    Live
+    Live,
+    Game
 }

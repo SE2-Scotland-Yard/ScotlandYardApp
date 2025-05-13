@@ -10,6 +10,7 @@ data class LobbyState(
     @SerializedName("started") val isStarted: Boolean,
     val maxPlayers: Int,
     val currentPlayerCount: Int,
-    val selectedRoles: Map<String, String> = emptyMap()
+    val selectedRoles: Map<String, String> = emptyMap(),
+    val position: Int
 )
 
