@@ -27,4 +27,11 @@ interface GameApi {
     ): List<AllowedMoveResponse>
 
 
+    @GET("api/game/mrXPosition")
+    suspend fun getMrXPosition(
+        @Query("gameId") gameId: String,
+        @Query("name") name: String
+    ): Int
+
+
 }

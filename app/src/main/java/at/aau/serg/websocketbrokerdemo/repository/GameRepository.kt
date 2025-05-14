@@ -1,10 +1,7 @@
 package at.aau.serg.websocketbrokerdemo.repository
 
-import android.app.GameState
 import at.aau.serg.websocketbrokerdemo.data.api.GameApi
-import at.aau.serg.websocketbrokerdemo.data.api.LobbyApi
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
-import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -22,6 +19,10 @@ class GameRepository (
 
         suspend fun getAllowedMoves(gameId: String, name: String): List<AllowedMoveResponse> {
             return api.getAllowedMoves(gameId, name)
+        }
+
+        suspend fun getMrXPosition(gameId: String, name: String): Int {
+            return api.getMrXPosition(gameId, name)
         }
 
     }

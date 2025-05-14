@@ -18,7 +18,7 @@ class GameViewModel(
         private set
 
 
-
+    var mrXPosition :Int? by mutableStateOf(null)
 
     var allowedMovesDetails:AllowedMoveResponse? by mutableStateOf(null)
 
@@ -41,6 +41,16 @@ class GameViewModel(
         viewModelScope.launch {
             try {
                 allowedMoves = repository.getAllowedMoves(gameId, name)
+            } catch (e: Exception) {
+                errorMessage = "Fehler: ${e.message}"
+            }
+        }
+    }
+
+    fun fetchMrXPosition(gameId: String, name: String) {
+        viewModelScope.launch {
+            try {
+                mrXPosition = repository.getMrXPosition(gameId, name)
             } catch (e: Exception) {
                 errorMessage = "Fehler: ${e.message}"
             }
