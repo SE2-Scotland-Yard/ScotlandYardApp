@@ -23,6 +23,7 @@ fun GameScreen(
     val gameUpdate by lobbyVm.gameState.collectAsState()
     val message by remember { derivedStateOf { gameVm.message } }
     val allowedMoves by remember { derivedStateOf { gameVm.allowedMoves } }
+    val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition }}
     val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails }}
     val error by remember { derivedStateOf { gameVm.errorMessage } }
 
@@ -35,6 +36,7 @@ fun GameScreen(
     LaunchedEffect(gameId, username) {
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
+            gameVm.fetchMrXPosition(gameId,username)
         }
     }
 
@@ -67,15 +69,25 @@ fun GameScreen(
                     Text("Eingeloggt als: $it", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(16.dp))
                 }
+                userSessionVm.role.value?.let {
+                    Text("Du bist: $it", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(16.dp))
+                }
 
                 Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(8.dp))
 
-                gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                    Text("$name steht auf Feld $pos")
-                    Spacer(Modifier.height(4.dp))
-                }
 
+                if (userSessionVm.role.value=="MRX") {
+                    mrXPosition?.let {
+                        Text("MrX steht auf: $it")
+                    }
+                }else {
+                    gameUpdate?.playerPositions?.forEach { (name, pos) ->
+                        Text("$name steht auf Feld $pos")
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
                 val myPosition = gameUpdate?.playerPositions?.get(username)
                 myPosition?.let {
                     Spacer(Modifier.height(16.dp))
