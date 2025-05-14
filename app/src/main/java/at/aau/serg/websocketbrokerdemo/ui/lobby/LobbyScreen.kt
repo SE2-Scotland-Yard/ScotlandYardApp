@@ -1,15 +1,22 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
+import com.example.myapplication.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,11 +59,22 @@ fun LobbyScreen(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = R.drawable.background1),
+            contentDescription = "Lobby Hintergrund",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Lobby $gameId") },
+                title = { Text("Lobby $gameId",
+                    //style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold) },
                 actions = {
                     TextButton(
                         onClick = {
@@ -66,7 +84,8 @@ fun LobbyScreen(
                             }
                         }
                     ) {
-                        Text("Verlassen", color = MaterialTheme.colorScheme.error)
+                        Text("Verlassen",
+                            color = Color.Black)
                     }
                 }
             )
@@ -75,7 +94,8 @@ fun LobbyScreen(
         lobbyState?.let { lobby ->
             val currentPlayer = userSessionVm.username.value.orEmpty()
             val currentRole = lobby.selectedRoles[currentPlayer]
-            val mrXTaken = lobby.selectedRoles.any { it.value == "MRX" && it.key != currentPlayer }
+            val mrXTaken =
+                lobby.selectedRoles.any { it.value == "MRX" && it.key != currentPlayer }
 
             Row(
                 modifier = Modifier
@@ -90,13 +110,20 @@ fun LobbyScreen(
                         .weight(1f)
                         .fillMaxHeight()
                 ) {
-                    Text("Spieler in der Lobby:", style = MaterialTheme.typography.titleMedium)
+                    Text("Spieler in der Lobby:",
+                        //style = MaterialTheme.typography.titleMedium
+                        color = Color.White.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
                     Spacer(Modifier.height(8.dp))
 
                     lobby.players.forEach { p ->
                         val ready = lobby.readyStatus[p] == true
                         val role = lobby.selectedRoles[p] ?: "unbekannt"
-                        Text("• $p - Rolle: $role ${if (ready) "(bereit)" else "(wartet)"}")
+                        Text("• $p - Rolle: $role ${if (ready) "(bereit)" else "(wartet)"}",
+                            color = Color.White.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
                 }
 
@@ -110,11 +137,18 @@ fun LobbyScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Wähle deine Rolle:", style = MaterialTheme.typography.titleMedium)
+                        Text("Wähle deine Rolle:",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Button(
                             onClick = { lobbyVm.selectRole(gameId, currentPlayer, "MRX") },
-                            enabled = !mrXTaken && !lobby.isStarted
+                            enabled = !mrXTaken && !lobby.isStarted,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorResource(id = R.color.buttonStartScreen),
+                                contentColor = Color.Black
+                            )
                         ) {
                             Text("MrX")
                         }
@@ -122,8 +156,18 @@ fun LobbyScreen(
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Button(
-                            onClick = { lobbyVm.selectRole(gameId, currentPlayer, "DETECTIVE") },
-                            enabled = !lobby.isStarted
+                            onClick = {
+                                lobbyVm.selectRole(
+                                    gameId,
+                                    currentPlayer,
+                                    "DETECTIVE"
+                                )
+                            },
+                            enabled = !lobby.isStarted,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorResource(id = R.color.buttonStartScreen),
+                                contentColor = Color.Black
+                            )
                         ) {
                             Text("Detective")
                         }
@@ -131,7 +175,10 @@ fun LobbyScreen(
 
                     currentRole?.let {
                         Spacer(Modifier.height(8.dp))
-                        Text("Deine aktuelle Rolle: $it")
+                        Text("Deine aktuelle Rolle: $it",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
                     }
 
                     if (mrXTaken && currentRole != "MRX") {
@@ -147,12 +194,19 @@ fun LobbyScreen(
                         Button(
                             onClick = {
                                 lobbyVm.sendReady(gameId, currentPlayer)
-                            }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorResource(id = R.color.buttonStartScreen),
+                                contentColor = Color.Black
+                            )
                         ) {
                             Text("Bereit")
                         }
                     } else {
-                        Text("Das Spiel hat begonnen!", color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "Das Spiel hat begonnen!",
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
