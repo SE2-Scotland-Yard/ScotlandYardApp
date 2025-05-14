@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,7 @@ fun GameScreen(
     LaunchedEffect(gameUpdate?.currentPlayer) {
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
+            gameVm.fetchMrXPosition(gameId,username)
         }
     }
 
@@ -81,6 +83,10 @@ fun GameScreen(
                 if (userSessionVm.role.value=="MRX") {
                     mrXPosition?.let {
                         Text("MrX steht auf: $it")
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    gameUpdate?.playerPositions?.forEach { (name, pos) ->
+                        Text("$name steht auf Feld $pos")
                     }
                 }else {
                     gameUpdate?.playerPositions?.forEach { (name, pos) ->
@@ -139,7 +145,9 @@ fun GameScreen(
                                             expanded = false
                                             username?.let { name ->
                                                 gameVm.move(gameId, name, ticketId, ticketType)
+                                                Thread.sleep(2000L)
                                                 gameVm.fetchMrXPosition(gameId,username)
+
                                             }
                                         }
                                     )
