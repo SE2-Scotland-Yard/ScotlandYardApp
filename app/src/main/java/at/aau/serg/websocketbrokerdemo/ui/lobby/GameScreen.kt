@@ -40,6 +40,13 @@ fun GameScreen(
         }
     }
 
+    LaunchedEffect(gameUpdate?.currentPlayer) {
+        if (username != null && gameUpdate?.currentPlayer == username) {
+            gameVm.fetchAllowedMoves(gameId, username)
+        }
+    }
+
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Game $gameId") })
