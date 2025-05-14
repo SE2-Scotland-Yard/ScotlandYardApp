@@ -29,6 +29,8 @@ fun GameScreen(
     var expanded by remember { mutableStateOf(false) }
     var selectedMove by remember { mutableStateOf<Int?>(null) }
 
+    val isMyTurn = username == gameUpdate?.currentPlayer
+
     // Moves nach dem Join laden
     LaunchedEffect(gameId, username) {
         if (username != null) {
@@ -95,7 +97,10 @@ fun GameScreen(
                     Text("Fehler: $error", color = MaterialTheme.colorScheme.error)
                 } else {
                     Box {
-                        Button(onClick = { expanded = true }) {
+                        Button(
+                            onClick = { expanded = true },
+                            enabled = isMyTurn
+                        ) {
                             Text(selectedMove?.let { "Feld $it gewählt" } ?: "Zugziel wählen")
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -123,18 +128,7 @@ fun GameScreen(
                         }
                     }
 
-                    selectedMove?.let {
-                        Spacer(Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                username?.let { name ->
-                                    gameVm.move(gameId, name, it, "TAXI")
-                                }
-                            }
-                        ) {
-                            Text("MOVE zu Feld $it")
-                        }
-                    }
+
                 }
             }
         }

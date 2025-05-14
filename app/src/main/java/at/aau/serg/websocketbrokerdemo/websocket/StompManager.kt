@@ -69,6 +69,45 @@ class StompManager {
         }
     }
 
+    fun sendOwnPositionRequest(jsonPayload: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                stompSession?.sendText("/app/game/requestOwnPosition", jsonPayload)
+                Log.d("STOMP", "Anfrage nach eigener Position gesendet: $jsonPayload")
+            } catch (e: Exception) {
+                Log.e("STOMP", "Fehler beim Senden der Position-Anfrage: ${e.message}", e)
+            }
+        }
+    }
+
+
+
+    fun subscribeToOwnPosition(playerId: String, onPositionReceived: (Int) -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val subscription = stompSession
+                    ?.subscribeText("/topic/ownPosition/$playerId")
+
+                if (subscription != null) {
+                    Log.d("STOMP", " Subscribed to /topic/ownPosition/$playerId")
+                } else {
+                    Log.w("STOMP", "⚠ Subscription returned null for /topic/ownPosition/$playerId")
+                }
+
+                subscription?.collectLatest { message ->
+                    Log.d("STOMP", " MrX Position erhalten: $message")
+                    val json = Gson().fromJson(message, Map::class.java)
+                    val position = (json["position"] as Double).toInt()
+                    onPositionReceived(position)
+                }
+            } catch (e: Exception) {
+                Log.e("STOMP", " Fehler beim Abo auf ownPosition: ${e.message}", e)
+            }
+        }
+    }
+
+
+
 
 
 
