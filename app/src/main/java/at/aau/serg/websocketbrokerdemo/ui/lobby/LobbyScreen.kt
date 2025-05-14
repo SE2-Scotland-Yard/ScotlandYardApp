@@ -44,6 +44,15 @@ fun LobbyScreen(
         )
     }
 
+    LaunchedEffect(lobbyState) {
+        val currentPlayer = userSessionVm.username.value.orEmpty()
+        val currentRole = lobbyState?.selectedRoles?.get(currentPlayer)
+        if (currentRole != null) {
+            userSessionVm.role.value = currentRole
+        }
+    }
+
+
     Scaffold(
         topBar = {
             TopAppBar(
