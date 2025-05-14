@@ -43,7 +43,6 @@ fun GameScreen(
     LaunchedEffect(gameUpdate?.currentPlayer) {
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
-            gameVm.fetchMrXPosition(gameId,username)
         }
     }
 
@@ -140,6 +139,7 @@ fun GameScreen(
                                             expanded = false
                                             username?.let { name ->
                                                 gameVm.move(gameId, name, ticketId, ticketType)
+                                                gameVm.fetchMrXPosition(gameId,username)
                                             }
                                         }
                                     )
