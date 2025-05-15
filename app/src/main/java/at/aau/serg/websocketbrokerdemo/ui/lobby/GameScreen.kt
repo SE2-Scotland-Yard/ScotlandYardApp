@@ -122,7 +122,7 @@ fun GameScreen(
                     Box {
                         Button(
                             onClick = { expanded = true },
-                            //enabled = isMyTurn
+                            enabled = isMyTurn
                         ) {
                             Text(selectedMove?.let { "Feld $it gewählt" } ?: "Zugziel wählen")
                         }
