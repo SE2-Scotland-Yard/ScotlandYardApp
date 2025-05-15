@@ -3,7 +3,6 @@ package at.aau.serg.websocketbrokerdemo.ui.auth
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -13,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -35,6 +34,7 @@ fun AuthScreen(mode: String = "login", onSuccess: () -> Unit = {},onBack: () -> 
     var password by remember { mutableStateOf("") }
     val message by remember { mutableStateOf("") }
 
+
     val isLogin = mode == "login"
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -52,7 +52,7 @@ fun AuthScreen(mode: String = "login", onSuccess: () -> Unit = {},onBack: () -> 
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
+                imageVector = Icons.Filled.ArrowBack,
                 contentDescription = "Zurück"
             )
         }
@@ -93,7 +93,6 @@ fun AuthScreen(mode: String = "login", onSuccess: () -> Unit = {},onBack: () -> 
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Passwort") },
-                //visualTransformation = PasswordVisualTransformation()
                 modifier = Modifier.width(320.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedContainerColor = Color.White.copy(alpha = 0.85f),
@@ -134,7 +133,6 @@ fun AuthScreen(mode: String = "login", onSuccess: () -> Unit = {},onBack: () -> 
                 enabled = username.isNotBlank() && password.isNotBlank(),
                 modifier = Modifier.width(320.dp),
                 colors = ButtonDefaults.buttonColors(
-                    //containerColor = MaterialTheme.colorScheme.primary,
                     containerColor = colorResource(id = R.color.buttonStartScreen),
                     contentColor = Color.White.copy(alpha = 0.85f)
                 )
@@ -143,8 +141,7 @@ fun AuthScreen(mode: String = "login", onSuccess: () -> Unit = {},onBack: () -> 
 
             }
 
-            //Spacer(modifier = Modifier.height(16.dp))
-            //Text(message, color = MaterialTheme.colorScheme.secondary)
+
         }
     }
 }

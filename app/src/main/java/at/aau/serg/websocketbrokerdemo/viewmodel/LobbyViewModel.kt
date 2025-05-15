@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
-import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

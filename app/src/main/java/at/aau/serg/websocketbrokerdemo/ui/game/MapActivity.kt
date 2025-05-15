@@ -26,8 +26,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
-import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
+
 import com.example.myapplication.R
 
 
@@ -49,14 +48,14 @@ fun MapScreen(useSmallMap: Boolean = false) {
             Text("Stub for Player Positions, Tickets and some actions")
             Spacer(Modifier.height(12.dp))
             Button(
-                onClick = { /* TODO: Move Player */ },
+                onClick = {},
                 colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen))
             ) {
                 Text("Move Player")
             }
             Spacer(Modifier.height(12.dp))
             Button(
-                onClick = { /* TODO: Use Ticket */ },
+                onClick = {},
                 colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen))
             ) {
                 Text("Use Ticket")

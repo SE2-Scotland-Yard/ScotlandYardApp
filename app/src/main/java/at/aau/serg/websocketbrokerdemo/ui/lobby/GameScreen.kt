@@ -4,13 +4,11 @@ import GameViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
-import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
-import kotlinx.coroutines.delay
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -108,32 +108,49 @@ sonar {
 
 dependencies {
 
+    // --- AndroidX Core & Lifecycle ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx.v262)
+
+    // --- Compose & UI ---
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation("androidx.compose.material3:material3:1.3.2")
     implementation(libs.androidx.constraintlayout)
+
+    // --- Navigation ---
     implementation(libs.androidx.navigation.compose)
+
+    // --- Coroutines ---
+    implementation(libs.kotlinx.coroutines.android)
+
+    // --- Netzwerk (Retrofit & Gson) ---
     implementation(libs.retrofit)
     implementation(libs.converter.scalars)
     implementation(libs.converter.gson)
     implementation(libs.gson)
-    implementation(libs.androidx.lifecycle.runtime.ktx.v262)
-    implementation(libs.kotlinx.coroutines.android)
-    implementation("androidx.compose.material3:material3:1.3.2")
-    testImplementation(libs.junit)
+
+    // --- WebSocket / STOMP (Krossbow) ---
     implementation(libs.krossbow.stomp.core)
     implementation(libs.krossbow.websocket.okhttp)
+
+    // --- Unit Testing ---
+    testImplementation(libs.junit)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
+
+    // --- Android Instrumentation Testing ---
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
+    // --- Debug / Preview Tools ---
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
