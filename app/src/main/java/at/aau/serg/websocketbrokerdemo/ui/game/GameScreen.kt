@@ -53,8 +53,8 @@ fun GameScreen(
     val gameUpdate by lobbyVm.gameState.collectAsState()
     val message by remember { derivedStateOf { gameVm.message } }
     val allowedMoves by remember { derivedStateOf { gameVm.allowedMoves } }
-    val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition }}
-    val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails }}
+    val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition } }
+    val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails } }
     val error by remember { derivedStateOf { gameVm.errorMessage } }
 
     var expanded by remember { mutableStateOf(false) }
@@ -66,14 +66,14 @@ fun GameScreen(
     LaunchedEffect(gameId, username) {
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
-            gameVm.fetchMrXPosition(gameId,username)
+            gameVm.fetchMrXPosition(gameId, username)
         }
     }
 
     LaunchedEffect(gameUpdate?.currentPlayer) {
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
-            gameVm.fetchMrXPosition(gameId,username)
+            gameVm.fetchMrXPosition(gameId, username)
         }
     }
 }
@@ -85,7 +85,7 @@ fun Map(
     userSessionVm: UserSessionViewModel,
     gameVm: GameViewModel,
     useSmallMap: Boolean = false
-){
+) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
@@ -148,8 +148,65 @@ fun BottomBar(
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
     gameVm: GameViewModel
-){
+) {
+    val username = userSessionVm.username.value
+    val gameUpdate by lobbyVm.gameState.collectAsState()
+    val message by remember { derivedStateOf { gameVm.message } }
+    val allowedMoves by remember { derivedStateOf { gameVm.allowedMoves } }
+    val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition } }
+    val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails } }
+    val error by remember { derivedStateOf { gameVm.errorMessage } }
 
+    var expanded by remember { mutableStateOf(false) }
+    var selectedMove by remember { mutableStateOf<Int?>(null) }
+
+    val isMyTurn = username == gameUpdate?.currentPlayer
+// Rechte Seite: Auswahl & Bewegung
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+    ) {
+        Text("Erlaubte Züge:", style = MaterialTheme.typography.titleMedium)
+
+        if (error != null) {
+            Text("Fehler: $error", color = MaterialTheme.colorScheme.error)
+        } else {
+            Box {
+                Button(
+                    onClick = { expanded = true },
+                    enabled = isMyTurn
+                ) {
+                    Text(selectedMove?.let { "Feld $it gewählt" } ?: "Zugziel wählen")
+                }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    if (allowedMoves.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("Keine Züge verfügbar") },
+                            onClick = { expanded = false }
+                        )
+                    } else {
+                        allowedMoves.forEach { move ->
+                            val ticketId = move.keys.first()
+                            val ticketType = move.values.first()
+                            DropdownMenuItem(
+                                text = { Text("$ticketType (Position zu: $ticketId)") },
+                                onClick = {
+                                    selectedMove = ticketId  // Ausgewählte ticketId speichern
+                                    expanded = false
+                                    username?.let { name ->
+                                        gameVm.move(gameId, name, ticketId, ticketType)
+                                        Thread.sleep(2000L)
+                                        gameVm.fetchMrXPosition(gameId, username)
+
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -158,13 +215,13 @@ fun SideBar(
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
     gameVm: GameViewModel
-){
+) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
     val message by remember { derivedStateOf { gameVm.message } }
     val allowedMoves by remember { derivedStateOf { gameVm.allowedMoves } }
-    val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition }}
-    val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails }}
+    val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition } }
+    val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails } }
     val error by remember { derivedStateOf { gameVm.errorMessage } }
 
     var expanded by remember { mutableStateOf(false) }
@@ -174,7 +231,6 @@ fun SideBar(
 
     Column(
         modifier = Modifier
-            .weight(1f)
             .fillMaxHeight()
     ) {
         username?.let {
@@ -190,7 +246,7 @@ fun SideBar(
         Spacer(Modifier.height(8.dp))
 
 
-        if (userSessionVm.role.value=="MRX") {
+        if (userSessionVm.role.value == "MRX") {
             mrXPosition?.let {
                 Text("MrX steht auf: $it")
             }
@@ -198,7 +254,7 @@ fun SideBar(
             gameUpdate?.playerPositions?.forEach { (name, pos) ->
                 Text("$name steht auf Feld $pos")
             }
-        }else {
+        } else {
             gameUpdate?.playerPositions?.forEach { (name, pos) ->
                 Text("$name steht auf Feld $pos")
             }
