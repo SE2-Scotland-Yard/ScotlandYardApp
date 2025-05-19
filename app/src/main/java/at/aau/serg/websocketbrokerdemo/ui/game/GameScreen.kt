@@ -12,7 +12,6 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +33,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
@@ -78,29 +78,40 @@ fun GameScreen(
     }
 
     Scaffold { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            Row{
-                SideBar(
+            Row(
+                modifier = Modifier.padding(innerPadding),
+                ){
+                SideBarLeft(
                     gameId = gameId,
                     lobbyVm = lobbyVm,
                     userSessionVm = userSessionVm,
-                    gameVm = GameViewModel()
+                    gameVm = GameViewModel(),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
                 )
 
                 Map(
                     gameId = gameId,
                     lobbyVm = lobbyVm,
                     userSessionVm = userSessionVm,
-                    gameVm = GameViewModel()
+                    gameVm = GameViewModel(),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(3f)
                 )
+                SideBarRight(
+                    gameId = gameId,
+                    lobbyVm = lobbyVm,
+                    userSessionVm = userSessionVm,
+                    gameVm = GameViewModel(),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                )
+
             }
-            BottomBar(
-                gameId = gameId,
-                lobbyVm = lobbyVm,
-                userSessionVm = userSessionVm,
-                gameVm = GameViewModel()
-            )
-        }
+
     }
 }
 
@@ -110,6 +121,7 @@ fun Map(
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
     gameVm: GameViewModel,
+    modifier: Modifier = Modifier,
     useSmallMap: Boolean = false
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -117,9 +129,7 @@ fun Map(
     var offsetY by remember { mutableFloatStateOf(0f) }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
+        modifier = modifier
     ) {
         Image(
             painter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map),
@@ -169,12 +179,13 @@ fun Map(
 }
 
 @Composable
-fun BottomBar(
+fun SideBarRight(
     gameId: String,
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
-    gameVm: GameViewModel
-) {
+    gameVm: GameViewModel,
+    modifier: Modifier = Modifier
+    ) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
     val message by remember { derivedStateOf { gameVm.message } }
@@ -189,8 +200,7 @@ fun BottomBar(
     val isMyTurn = username == gameUpdate?.currentPlayer
 // Rechte Seite: Auswahl & Bewegung
     Column(
-        modifier = Modifier
-            .fillMaxHeight()
+        modifier = modifier
     ) {
         Text("Erlaubte Züge:", style = MaterialTheme.typography.titleMedium)
 
@@ -236,12 +246,13 @@ fun BottomBar(
 }
 
 @Composable
-fun SideBar(
+fun SideBarLeft(
     gameId: String,
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
-    gameVm: GameViewModel
-) {
+    gameVm: GameViewModel,
+    modifier: Modifier = Modifier
+    ) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
     val message by remember { derivedStateOf { gameVm.message } }
@@ -256,8 +267,7 @@ fun SideBar(
     val isMyTurn = username == gameUpdate?.currentPlayer
 
     Column(
-        modifier = Modifier
-            .fillMaxHeight()
+        modifier = modifier
     ) {
         username?.let {
             Text("Eingeloggt als: $it", style = MaterialTheme.typography.titleMedium)
