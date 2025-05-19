@@ -130,6 +130,13 @@ fun Map(
 
     Box(
         modifier = modifier
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(1f, 5f)
+                    offsetX += pan.x
+                    offsetY += pan.y
+                }
+            }
     ) {
         Image(
             painter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map),
@@ -142,13 +149,7 @@ fun Map(
                     translationX = offsetX,
                     translationY = offsetY
                 )
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(1f, 5f)
-                        offsetX += pan.x
-                        offsetY += pan.y
-                    }
-                }
+
         )
         Box(
             modifier = Modifier
