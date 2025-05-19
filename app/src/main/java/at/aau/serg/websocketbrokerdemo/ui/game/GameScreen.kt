@@ -76,6 +76,32 @@ fun GameScreen(
             gameVm.fetchMrXPosition(gameId, username)
         }
     }
+
+    Scaffold { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding)) {
+            Row{
+                SideBar(
+                    gameId = gameId,
+                    lobbyVm = lobbyVm,
+                    userSessionVm = userSessionVm,
+                    gameVm = GameViewModel()
+                )
+
+                Map(
+                    gameId = gameId,
+                    lobbyVm = lobbyVm,
+                    userSessionVm = userSessionVm,
+                    gameVm = GameViewModel()
+                )
+            }
+            BottomBar(
+                gameId = gameId,
+                lobbyVm = lobbyVm,
+                userSessionVm = userSessionVm,
+                gameVm = GameViewModel()
+            )
+        }
+    }
 }
 
 @Composable
@@ -87,7 +113,7 @@ fun Map(
     useSmallMap: Boolean = false
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
 
     Box(
