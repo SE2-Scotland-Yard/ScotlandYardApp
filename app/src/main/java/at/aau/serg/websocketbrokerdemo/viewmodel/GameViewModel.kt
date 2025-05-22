@@ -27,6 +27,8 @@ class GameViewModel(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
+    val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions()
+
     fun move(gameId: String, name: String, to: Int, gotTicket: String) {
        viewModelScope.launch {
            try {
@@ -56,5 +58,4 @@ class GameViewModel(
             }
         }
     }
-
 }
