@@ -2,6 +2,7 @@ package at.aau.serg.websocketbrokerdemo.ui.game
 
 import androidx.compose.runtime.Composable
 import GameViewModel
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,7 +37,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 
 import com.example.myapplication.R
@@ -127,9 +135,12 @@ fun Map(
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
+    val points = gameVm.pointPositions
 
     Box(
         modifier = modifier
+            .background(color = colorResource(R.color.light_blue_900))
+            .clipToBounds()
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
                     scale = (scale * zoom).coerceIn(1f, 5f)
@@ -142,7 +153,6 @@ fun Map(
             painter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map),
             contentDescription = "Scotland Yard Map",
             modifier = Modifier
-                .fillMaxSize()
                 .graphicsLayer(
                     scaleX = scale,
                     scaleY = scale,
@@ -151,6 +161,20 @@ fun Map(
                 )
 
         )
+        Canvas(modifier = Modifier) {
+            points.forEach { (id, pos) ->
+                val (x, y) = pos
+                val screenX = x * 0.5f + offsetX //No idea why but it has to be half the coordinate size
+                val screenY = y * 0.5f + offsetY
+
+                drawCircle(
+                    color = Color.Red,
+                    radius = 15f,
+                    center = Offset(screenX, screenY)
+                )
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -165,15 +189,8 @@ fun Map(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen)),
                 modifier = Modifier
-                    .size(width = 150.dp, height = 50.dp)
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = RoundedCornerShape(12.dp),
-                        ambientColor = Color.Black,
-                        spotColor = Color.DarkGray
-                    )
             ) {
-                Text("Reset Zoom")
+                Text(text = "Reset Zoom", fontSize = 12.sp)
             }
         }
     }
