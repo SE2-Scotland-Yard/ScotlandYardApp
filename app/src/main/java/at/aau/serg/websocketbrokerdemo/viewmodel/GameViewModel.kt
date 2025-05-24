@@ -30,6 +30,12 @@ class GameViewModel(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
+    var isDoubleMoveMode by mutableStateOf(false)
+
+    fun updateDoubleMoveMode(enabled: Boolean) {
+        isDoubleMoveMode = enabled
+    }
+
     fun move(gameId: String, name: String, to: Int, gotTicket: String) {
        viewModelScope.launch {
            try {
