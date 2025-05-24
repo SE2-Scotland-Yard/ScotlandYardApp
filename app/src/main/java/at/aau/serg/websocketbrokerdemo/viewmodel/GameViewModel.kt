@@ -4,6 +4,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
+import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import kotlinx.coroutines.launch
 
@@ -23,6 +24,8 @@ class GameViewModel(
     var allowedMovesDetails:AllowedMoveResponse? by mutableStateOf(null)
 
     var allowedMoves: List<AllowedMoveResponse> by mutableStateOf(emptyList())
+
+    var allowedDoubleMoves: List<MrXDoubleMoveResponse> by mutableStateOf(emptyList())
 
     var errorMessage by mutableStateOf<String?>(null)
         private set
@@ -53,6 +56,32 @@ class GameViewModel(
                 mrXPosition = repository.getMrXPosition(gameId, name)
             } catch (e: Exception) {
                 errorMessage = "Fehler: ${e.message}"
+            }
+        }
+    }
+    fun moveDouble(
+        gameId: String,
+        name: String,
+        firstTo: Int,
+        firstTicket: String,
+        secondTo: Int,
+        secondTicket: String
+    ) {
+        viewModelScope.launch {
+            try {
+                message = repository.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
+            } catch (e: Exception) {
+                errorMessage = e.message
+            }
+        }
+    }
+
+    fun fetchAllowedDoubleMoves(gameId: String, name: String) {
+        viewModelScope.launch {
+            try {
+                allowedDoubleMoves = repository.getAllowedDoubleMoves(gameId, name)
+            } catch (e: Exception) {
+                errorMessage = e.message
             }
         }
     }
