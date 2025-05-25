@@ -1,5 +1,6 @@
 package at.aau.serg.websocketbrokerdemo.repository
 
+import androidx.compose.ui.graphics.vector.EmptyPath
 import at.aau.serg.websocketbrokerdemo.data.api.GameApi
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import retrofit2.Retrofit
@@ -24,5 +25,25 @@ class GameRepository (
         suspend fun getMrXPosition(gameId: String, name: String): Int {
             return api.getMrXPosition(gameId, name)
         }
+
+        fun getPointPositions(): Map<Int, Pair<Int, Int>> {
+            //TODO: Implement loading in positions from json file, currently hard coded some for testing
+            val map : Map<Int, Pair<Int, Int>> = mapOf(
+                0 to Pair(0,0),
+                1 to Pair(318, 78),
+                2 to Pair(782, 42),
+                3 to Pair(1082, 48),
+                4 to Pair(1268, 36),
+                5 to Pair(1996, 58),
+                172 to Pair(1910,1542),
+                173 to Pair(2170,1620),
+                190 to Pair(290,1824),
+                191 to Pair(438,1706)
+
+            )
+            return map
+        }
+
+
 
     }
