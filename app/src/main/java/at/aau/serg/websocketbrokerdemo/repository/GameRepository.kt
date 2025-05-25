@@ -3,6 +3,8 @@ package at.aau.serg.websocketbrokerdemo.repository
 import androidx.compose.ui.graphics.vector.EmptyPath
 import at.aau.serg.websocketbrokerdemo.data.api.GameApi
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
+import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
+import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -24,6 +26,21 @@ class GameRepository (
 
         suspend fun getMrXPosition(gameId: String, name: String): Int {
             return api.getMrXPosition(gameId, name)
+        }
+
+        suspend fun getAllowedDoubleMoves(gameId: String, name: String): List<MrXDoubleMoveResponse> {
+            return api.getAllowedDoubleMoves(gameId, name)
+        }
+
+        suspend fun moveDouble(
+            gameId: String,
+            name: String,
+            firstTo: Int,
+            firstTicket: String,
+            secondTo: Int,
+            secondTicket: String
+        ): MoveResponse {
+            return api.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
         }
 
         fun getPointPositions(): Map<Int, Pair<Int, Int>> {

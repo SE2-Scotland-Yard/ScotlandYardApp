@@ -4,6 +4,7 @@ package at.aau.serg.websocketbrokerdemo.data.api
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 
 import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
+import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import retrofit2.http.GET
 import retrofit2.http.POST
 
@@ -31,6 +32,23 @@ interface GameApi {
         @Query("gameId") gameId: String,
         @Query("name") name: String
     ): Int
+
+    @GET("api/game/allowedDoubleMoves")
+    suspend fun getAllowedDoubleMoves(
+        @Query("gameId") gameId: String,
+        @Query("name") name: String
+    ): List<MrXDoubleMoveResponse>
+
+    @POST("api/game/moveDouble")
+    suspend fun moveDouble(
+        @Query("gameId") gameId: String,
+        @Query("name") name: String,
+        @Query("firstTo") firstTo: Int,
+        @Query("firstTicket") firstTicket: String,
+        @Query("secondTo") secondTo: Int,
+        @Query("secondTicket") secondTicket: String
+    ): MoveResponse
+
 
 
 }

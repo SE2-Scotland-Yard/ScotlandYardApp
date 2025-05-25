@@ -43,9 +43,6 @@
             android:name="at.aau.serg.websocketbrokerdemo.ui.lobby.LobbyActivity"
             android:exported="true" />
 
-        <activity android:name="at.aau.serg.websocketbrokerdemo.ui.game.GameActivity"
-            android:exported="false" />
-
     </application>
 
 </manifest>
