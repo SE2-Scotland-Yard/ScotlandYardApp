@@ -1,4 +1,5 @@
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -31,6 +32,8 @@ class GameViewModel(
         private set
 
     val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions()
+
+    var scale : Float by mutableFloatStateOf(1f)
 
     var isDoubleMoveMode by mutableStateOf(false)
 
@@ -93,6 +96,14 @@ class GameViewModel(
                 errorMessage = e.message
             }
         }
+    }
+
+    fun increaseZoom(){
+        scale += 0.1f
+    }
+
+    fun decreaseZoom(){
+        scale -= 0.1f
     }
 
 }

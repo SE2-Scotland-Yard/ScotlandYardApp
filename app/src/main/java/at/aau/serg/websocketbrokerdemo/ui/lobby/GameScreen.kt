@@ -1,36 +1,33 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
+import android.graphics.Paint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Canvas
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.TextFieldDefaults.indicatorLine
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
@@ -52,9 +49,19 @@ fun GameScreen(
     val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition } }
     val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails } }
     val error by remember { derivedStateOf { gameVm.errorMessage } }
+    val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
+    val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
+    val scale by remember { derivedStateOf { gameVm.scale } }
 
     var expanded by remember { mutableStateOf(false) }
     var selectedMove by remember { mutableStateOf<Int?>(null) }
+
+    //States für DoubleMove
+    var firstMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
+    var secondMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
+    var expandedFirstMove by remember { mutableStateOf(false) }
+    var expandedSecondMove by remember { mutableStateOf(false) }
+
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
@@ -63,6 +70,12 @@ fun GameScreen(
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
+            gameVm.fetchMrXPosition(gameId, username)
+            if (userSessionVm.role.value == "MRX") {
+                gameVm.fetchAllowedDoubleMoves(gameId, username)
+                //zuerst auf false, MrX setzt selber
+                gameVm.updateDoubleMoveMode(false)
+            }
         }
     }
 
@@ -70,22 +83,103 @@ fun GameScreen(
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
+            gameVm.fetchMrXPosition(gameId, username)
+            if (userSessionVm.role.value == "MRX") {
+                gameVm.fetchAllowedDoubleMoves(gameId, username)
+
+            }
         }
     }
 
 
     Scaffold { padding ->
+        Image(
+            modifier = Modifier.fillMaxSize(),
+            painter = painterResource(R.drawable.background1),
+            contentDescription = "background",
+            contentScale = ContentScale.Crop
+        )
         Box(
             modifier = Modifier
                 .padding(padding)
         ) {
-            Map(gameVm, useSmallMap)
 
-            OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
-            OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
+            Map(gameVm, useSmallMap)
+            BottomBar(gameVm)
+            //OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
+            //OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
         }
     }
 }
+
+@Composable
+private fun BoxScope.BottomBar(gameVm: GameViewModel) {
+    Row(
+        modifier = Modifier
+            .align(Alignment.BottomCenter),
+    ) {
+        val spacermod = Modifier.width(12.dp)
+        Image(
+            painter = painterResource(id = R.drawable.ticket_double),
+            contentDescription = "Map",
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.clickable(onClick = {})
+        )
+
+        Spacer(spacermod)
+
+        Image(
+            painter = painterResource(id = R.drawable.ticket_black),
+            contentDescription = "Map",
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.clickable(onClick = {})
+        )
+        Spacer(spacermod)
+
+        Image(
+            painter = painterResource(id = R.drawable.ticket_taxi),
+            contentDescription = "Map",
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.clickable(onClick = {})
+        )
+        Spacer(spacermod)
+
+        Image(
+            painter = painterResource(id = R.drawable.ticket_bus),
+            contentDescription = "Map",
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.clickable(onClick = {})
+        )
+        Spacer(spacermod)
+
+        Image(
+            painter = painterResource(id = R.drawable.ticket_under),
+            contentDescription = "Map",
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.clickable(onClick = {})
+        )
+        Spacer(spacermod)
+
+
+        Button(
+            onClick = { gameVm.increaseZoom() },
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
+        ) {
+            Text("+")
+        }
+        Spacer(spacermod)
+
+        Button(
+            onClick = { gameVm.decreaseZoom() },
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
+        ) {
+            Text("-")
+        }
+
+
+    }
+}
+
 
 @Composable
 private fun BoxScope.OverlayRight(
@@ -216,9 +310,7 @@ private fun BoxScope.OverlayLeft(
 }
 
 @Composable
-fun Map(gameVm: GameViewModel,useSmallMap: Boolean) {
-    var scale by remember { mutableFloatStateOf(1f) }
-
+fun Map(gameVm: GameViewModel, useSmallMap: Boolean) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
     val points = gameVm.pointPositions
@@ -227,15 +319,15 @@ fun Map(gameVm: GameViewModel,useSmallMap: Boolean) {
     val scrollStateY = rememberScrollState()
 
     val density = LocalDensity.current
-    val virtualWidthDp = with(density) { (intrinsicSize.width * scale).toDp() }
-    val virtualHeightDp = with(density) { (intrinsicSize.height * scale).toDp() }
+    val virtualWidthDp = with(density) { (intrinsicSize.width * gameVm.scale).toDp() }
+    val virtualHeightDp = with(density) { (intrinsicSize.height * gameVm.scale).toDp() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
 
-    ) {
+        ) {
+
         // Scrollable container
         Box(
             modifier = Modifier
@@ -246,46 +338,28 @@ fun Map(gameVm: GameViewModel,useSmallMap: Boolean) {
             // Content sized to scaled dimensions
             Box(
                 modifier = Modifier
-                    .size(virtualWidthDp, virtualHeightDp) // Scaled size
+                    .size(virtualWidthDp, virtualHeightDp)
             ) {
                 Image(
                     painter = mapPainter,
                     contentDescription = "Map",
                     contentScale = ContentScale.FillBounds,
-                    modifier = Modifier.fillMaxSize() // fill scaled box
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     points.forEach { (_, pos) ->
-                        val(x,y) = pos
+                        val (x, y) = pos
                         drawCircle(
                             color = Color.Red,
                             radius = 15f,
-                            center = Offset(x * scale, y* scale)
+                            center = Offset(x * gameVm.scale, y * gameVm.scale)
                         )
                     }
                 }
             }
         }
 
-        // Zoom controls
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Slider(
-                value = scale,
-                onValueChange = { scale = it },
-                valueRange = 0.5f..5f
-            )
-            Button(
-                onClick = { scale = 1f },
-                colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen))
-            ) {
-                Text("Reset Zoom")
-            }
-        }
     }
 }
 
