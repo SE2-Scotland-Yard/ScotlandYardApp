@@ -19,9 +19,11 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 
@@ -104,10 +107,10 @@ fun GameScreen(
                 .padding(padding)
         ) {
 
-            Map(gameVm, useSmallMap)
+            Map(gameVm, useSmallMap, allowedMoves)
             BottomBar(gameVm)
-            //OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
-            //OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
+            OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
+            OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
         }
     }
 }
@@ -119,45 +122,21 @@ private fun BoxScope.BottomBar(gameVm: GameViewModel) {
             .align(Alignment.BottomCenter),
     ) {
         val spacermod = Modifier.width(12.dp)
-        Image(
-            painter = painterResource(id = R.drawable.ticket_double),
-            contentDescription = "Map",
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.clickable(onClick = {})
-        )
+
+        SelectableImage(imageRes = R.drawable.ticket_double, isSelected = true) { }
 
         Spacer(spacermod)
 
-        Image(
-            painter = painterResource(id = R.drawable.ticket_black),
-            contentDescription = "Map",
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.clickable(onClick = {})
-        )
-        Spacer(spacermod)
+        SelectableImage(imageRes = R.drawable.ticket_black, isSelected = true) {}
 
-        Image(
-            painter = painterResource(id = R.drawable.ticket_taxi),
-            contentDescription = "Map",
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.clickable(onClick = {})
-        )
         Spacer(spacermod)
+        SelectableImage(imageRes = R.drawable.ticket_taxi, isSelected = true) {}
 
-        Image(
-            painter = painterResource(id = R.drawable.ticket_bus),
-            contentDescription = "Map",
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.clickable(onClick = {})
-        )
         Spacer(spacermod)
+        SelectableImage(imageRes = R.drawable.ticket_bus, isSelected = true) {}
 
-        Image(
-            painter = painterResource(id = R.drawable.ticket_under),
-            contentDescription = "Map",
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.clickable(onClick = {})
-        )
+        Spacer(spacermod)
+        SelectableImage(imageRes = R.drawable.ticket_under, isSelected = true) {}
         Spacer(spacermod)
 
 
@@ -180,137 +159,36 @@ private fun BoxScope.BottomBar(gameVm: GameViewModel) {
     }
 }
 
+@Composable
+fun SelectableImage(
+    imageRes: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .border(
+                width = if (isSelected) 3.dp else 0.dp,
+                color = if (isSelected) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable { onClick() }
+    ) {
+        Image(
+            painter = painterResource(id = imageRes),
+            contentDescription = null,
+        )
+    }
+}
+
 
 @Composable
-private fun BoxScope.OverlayRight(
-    error: String?,
-    expanded: Boolean,
-    isMyTurn: Boolean,
-    selectedMove: Int?,
-    allowedMoves: List<AllowedMoveResponse>,
-    username: String?,
+fun Map(
     gameVm: GameViewModel,
-    gameId: String
-) {
-    var expanded1 = expanded
-    var selectedMove1 = selectedMove
-    Column(
-        modifier = Modifier
-            .align(Alignment.TopEnd) // Unten rechts ausrichten
-            .padding(24.dp)
-            .width(IntrinsicSize.Max) // Passt die Breite an den breitesten Inhalt an
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)) // Halbtransparenter Hintergrund
-            .padding(16.dp)
-            .zIndex(1f) // Stellt sicher, dass dieses Overlay über der Karte liegt
+    useSmallMap: Boolean,
+    allowedMoves: List<AllowedMoveResponse>,
     ) {
-        Text("Erlaubte Züge:", style = MaterialTheme.typography.titleMedium)
-
-        if (error != null) {
-            Text("Fehler: $error", color = MaterialTheme.colorScheme.error)
-        } else {
-            Box {
-                Button(
-                    onClick = { expanded1 = true },
-                    enabled = isMyTurn
-                ) {
-                    Text(selectedMove1?.let { "Feld $it gewählt" } ?: "Zugziel wählen")
-                }
-                DropdownMenu(expanded = expanded1, onDismissRequest = { expanded1 = false }) {
-                    if (allowedMoves.isEmpty()) {
-                        DropdownMenuItem(
-                            text = { Text("Keine Züge verfügbar") },
-                            onClick = { expanded1 = false }
-                        )
-                    } else {
-                        allowedMoves.forEach { move ->
-                            val ticketId = move.keys.first()
-                            val ticketType = move.values.first()
-                            DropdownMenuItem(
-                                text = { Text("$ticketType (Position zu: $ticketId)") },
-                                onClick = {
-                                    selectedMove1 = ticketId
-                                    expanded1 = false
-                                    username?.let { name ->
-                                        gameVm.move(gameId, name, ticketId, ticketType)
-                                        Thread.sleep(2000L)
-                                        gameVm.fetchMrXPosition(gameId, username)
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BoxScope.OverlayLeft(
-    username: String?,
-    userSessionVm: UserSessionViewModel,
-    mrXPosition: Int?,
-    gameUpdate: GameUpdate?,
-    message: String,
-    gameId: String
-
-) {
-    Column(
-        modifier = Modifier
-            .align(Alignment.TopStart) // Oben links ausrichten
-            .padding(24.dp)
-            .width(IntrinsicSize.Max) // Passt die Breite an den breitesten Inhalt an
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)) // Halbtransparenter Hintergrund
-            .padding(16.dp)
-            .zIndex(1f) // Stellt sicher, dass dieses Overlay über der Karte liegt
-    ) {
-        gameId.let {
-            Text("Game ID: $it", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(16.dp))
-        }
-        username?.let {
-            Text("Eingeloggt als: $it", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(16.dp))
-        }
-        userSessionVm.role.value?.let {
-            Text("Du bist: $it", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(16.dp))
-        }
-
-        Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(8.dp))
-
-        if (userSessionVm.role.value == "MRX") {
-            mrXPosition?.let {
-                Text("MrX steht auf: $it")
-            }
-            Spacer(Modifier.height(16.dp))
-            gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                Text("$name steht auf Feld $pos")
-            }
-        } else {
-            gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                Text("$name steht auf Feld $pos")
-            }
-        }
-        Spacer(Modifier.height(4.dp))
-        val myPosition = gameUpdate?.playerPositions?.get(username)
-        myPosition?.let {
-            Spacer(Modifier.height(16.dp))
-            Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(16.dp))
-        }
-
-        // Hier wird die Nachricht angezeigt
-        if (message.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            Text(message, color = MaterialTheme.colorScheme.primary)
-        }
-    }
-}
-
-@Composable
-fun Map(gameVm: GameViewModel, useSmallMap: Boolean) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
     val points = gameVm.pointPositions
@@ -326,7 +204,7 @@ fun Map(gameVm: GameViewModel, useSmallMap: Boolean) {
         modifier = Modifier
             .fillMaxSize()
 
-        ) {
+    ) {
 
         // Scrollable container
         Box(
@@ -347,22 +225,39 @@ fun Map(gameVm: GameViewModel, useSmallMap: Boolean) {
                     modifier = Modifier.fillMaxSize()
                 )
 
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    points.forEach { (_, pos) ->
-                        val (x, y) = pos
-                        drawCircle(
-                            color = Color.Red,
-                            radius = 15f,
-                            center = Offset(x * gameVm.scale, y * gameVm.scale)
-                        )
+                val buttonSizeDp = (15*gameVm.scale).dp
+
+                points.forEach { (id, pos) ->
+                    val (xPx, yPx) = pos
+                    val xDp = with(density) { (xPx * gameVm.scale).toDp() }
+                    val yDp = with(density) { (yPx * gameVm.scale).toDp() }
+                    var allowed = false
+                    allowedMoves.forEach { move -> if(id in move.keys) allowed = true}
+
+                    Button(
+                        onClick = { /* handle click */ },
+                        modifier = Modifier
+                            .offset(
+                                x = xDp - buttonSizeDp / 2,
+                                y = yDp - buttonSizeDp / 2
+                            )
+                            .border(
+                                width = if (allowed) 3.dp else 0.dp,
+                                color = if (allowed) Color.Blue else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+
+                            .size(buttonSizeDp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+
+                    ) {
+                        // Optional content
                     }
                 }
             }
         }
-
     }
 }
-
 
 
 
