@@ -20,6 +20,10 @@ class GameRepository (
             return api.move(gameId, name, to, gotTicket).message
         }
 
+        suspend fun blackMove(gameId: String, name: String, to: Int, gotTicket: String):String{
+            return api.blackMove(gameId, name, to, gotTicket).message
+        }
+
         suspend fun getAllowedMoves(gameId: String, name: String): List<AllowedMoveResponse> {
             return api.getAllowedMoves(gameId, name)
         }
