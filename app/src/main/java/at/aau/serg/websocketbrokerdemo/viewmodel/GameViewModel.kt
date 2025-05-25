@@ -30,6 +30,8 @@ class GameViewModel(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
+    val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions()
+
     var isDoubleMoveMode by mutableStateOf(false)
 
     fun updateDoubleMoveMode(enabled: Boolean) {

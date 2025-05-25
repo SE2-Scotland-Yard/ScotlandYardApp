@@ -1,16 +1,27 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
+import androidx.compose.ui.unit.sp
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
+import com.example.myapplication.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,7 +30,9 @@ fun GameScreen(
     gameId: String,
     lobbyVm: LobbyViewModel,
     userSessionVm: UserSessionViewModel,
-    gameVm: GameViewModel
+    gameVm: GameViewModel,
+    useSmallMap: Boolean = false
+
 ) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
@@ -48,6 +61,7 @@ fun GameScreen(
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
+            gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
                 gameVm.fetchAllowedDoubleMoves(gameId, username)
                 //zuerst auf false, MrX setzt selber
@@ -59,6 +73,7 @@ fun GameScreen(
     LaunchedEffect(gameUpdate?.currentPlayer) {
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
+            gameVm.fetchMrXPosition(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
                 gameVm.fetchAllowedDoubleMoves(gameId, username)
@@ -126,8 +141,58 @@ fun GameScreen(
                     Text(message, color = MaterialTheme.colorScheme.primary)
                 }
             }
+            //Map
 
-            Spacer(Modifier.width(24.dp)) // Abstand
+            var scale by remember { mutableFloatStateOf(1f) }
+            var offsetX by remember { mutableFloatStateOf(0f) }
+            var offsetY by remember { mutableFloatStateOf(0f) }
+            val points = gameVm.pointPositions
+
+            Box(
+                modifier = Modifier
+                    .weight(3f)
+                    .background(color = colorResource(R.color.light_blue_900))
+                    .clipToBounds()
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 5f)
+                            offsetX += pan.x
+                            offsetY += pan.y
+                        }
+                    }
+            ) {
+                Image(
+                    painter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map),
+                    contentDescription = "Scotland Yard Map",
+                    modifier = Modifier
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY
+                        )
+
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    Button(
+                        onClick = {
+                            scale = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen)),
+                        modifier = Modifier
+                    ) {
+                        Text(text = "Reset Zoom", fontSize = 12.sp)
+                    }
+                }
+            }
 
             // Rechte Seite: Auswahl & Bewegung
             Box(
@@ -291,4 +356,5 @@ fun GameScreen(
         }
     }
 }
+
 
