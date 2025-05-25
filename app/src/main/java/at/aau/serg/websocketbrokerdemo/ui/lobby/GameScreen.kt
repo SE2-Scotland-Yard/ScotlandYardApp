@@ -20,10 +20,17 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.TextFieldDefaults.indicatorLine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
@@ -67,29 +74,15 @@ fun GameScreen(
     }
 
 
-    Scaffold{ padding ->
-        Map(gameVm, useSmallMap)
+    Scaffold { padding ->
         Box(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(padding)
         ) {
-            // Overlays für Spielerstatus und Zugauswahl
-            // Diese Column wird oben links über der Karte platziert
-            OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
+            Map(gameVm, useSmallMap)
 
-            // Overlay für die Zugauswahl
-            // Diese Column wird unten rechts über der Karte platziert
-            OverlayRight(
-                error,
-                expanded,
-                isMyTurn,
-                selectedMove,
-                allowedMoves,
-                username,
-                gameVm,
-                gameId
-            )
+            OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
+            OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
         }
     }
 }
@@ -177,7 +170,7 @@ private fun BoxScope.OverlayLeft(
             .padding(16.dp)
             .zIndex(1f) // Stellt sicher, dass dieses Overlay über der Karte liegt
     ) {
-        gameId.let{
+        gameId.let {
             Text("Game ID: $it", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(16.dp))
         }
@@ -223,74 +216,79 @@ private fun BoxScope.OverlayLeft(
 }
 
 @Composable
-private fun Map(gameVm: GameViewModel, useSmallMap: Boolean) {
+fun Map(gameVm: GameViewModel,useSmallMap: Boolean) {
     var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
+
+    val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
+    val intrinsicSize = mapPainter.intrinsicSize
     val points = gameVm.pointPositions
+
+    val scrollStateX = rememberScrollState()
+    val scrollStateY = rememberScrollState()
+
+    val density = LocalDensity.current
+    val virtualWidthDp = with(density) { (intrinsicSize.width * scale).toDp() }
+    val virtualHeightDp = with(density) { (intrinsicSize.height * scale).toDp() }
 
     Box(
         modifier = Modifier
-            .background(color = colorResource(R.color.light_blue_900))
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(0.5f, 5f)
-                    offsetX += pan.x
-                    offsetY += pan.y
-                }
-            }
+            .fillMaxSize()
+            .background(Color.Black),
+
     ) {
+        // Scrollable container
         Box(
             modifier = Modifier
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offsetX,
-                    translationY = offsetY
-                )
+                .horizontalScroll(scrollStateX)
+                .verticalScroll(scrollStateY)
+                .align(Alignment.Center)
         ) {
-            Image(
-                painter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map),
-                contentDescription = "Scotland Yard Map"
-            )
+            // Content sized to scaled dimensions
+            Box(
+                modifier = Modifier
+                    .size(virtualWidthDp, virtualHeightDp) // Scaled size
+            ) {
+                Image(
+                    painter = mapPainter,
+                    contentDescription = "Map",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize() // fill scaled box
+                )
 
-            Canvas(modifier = Modifier) {
-                points.forEach { (id, pos) ->
-                    val (x, y) = pos
-                    val screenX = x * 1f //No idea why but it has to be half the coordinate size
-                    val screenY = y * 1f
-
-                    drawCircle(
-                        color = Color.Red,
-                        radius = 15f,
-                        center = Offset(screenX, screenY)
-                    )
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    points.forEach { (_, pos) ->
+                        val(x,y) = pos
+                        drawCircle(
+                            color = Color.Red,
+                            radius = 15f,
+                            center = Offset(x * scale, y* scale)
+                        )
+                    }
                 }
             }
         }
 
-
-
-        Box(
+        // Zoom controls
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.BottomEnd
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
         ) {
+            Slider(
+                value = scale,
+                onValueChange = { scale = it },
+                valueRange = 0.5f..5f
+            )
             Button(
-                onClick = {
-                    scale = 1f
-                    offsetX = 0f
-                    offsetY = 0f
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen)),
-                modifier = Modifier
+                onClick = { scale = 1f },
+                colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen))
             ) {
-                Text(text = "Reset Zoom, $scale", fontSize = 12.sp)
+                Text("Reset Zoom")
             }
         }
     }
 }
+
 
 
 
