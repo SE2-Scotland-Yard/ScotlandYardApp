@@ -2,6 +2,7 @@ package at.aau.serg.websocketbrokerdemo.repository
 
 import at.aau.serg.websocketbrokerdemo.data.api.GameApi
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
+import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -37,7 +38,7 @@ class GameRepository (
             firstTicket: String,
             secondTo: Int,
             secondTicket: String
-        ): String {
+        ): MoveResponse {
             return api.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
         }
 

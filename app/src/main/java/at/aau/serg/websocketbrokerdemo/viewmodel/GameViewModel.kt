@@ -75,7 +75,8 @@ class GameViewModel(
     ) {
         viewModelScope.launch {
             try {
-                message = repository.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
+                val response = repository.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
+                message = response.message
             } catch (e: Exception) {
                 errorMessage = e.message
             }

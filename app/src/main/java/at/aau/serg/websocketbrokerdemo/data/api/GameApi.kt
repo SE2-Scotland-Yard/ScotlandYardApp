@@ -47,7 +47,7 @@ interface GameApi {
         @Query("firstTicket") firstTicket: String,
         @Query("secondTo") secondTo: Int,
         @Query("secondTicket") secondTicket: String
-    ): String
+    ): MoveResponse
 
 
 
