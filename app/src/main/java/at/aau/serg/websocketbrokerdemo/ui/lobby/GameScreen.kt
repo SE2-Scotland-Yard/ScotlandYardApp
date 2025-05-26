@@ -110,7 +110,7 @@ fun GameScreen(
         ) {
 
             Map(gameVm, useSmallMap, allowedMoves)
-            BottomBar(gameVm)
+            BottomBar(gameVm, username,gameId)
             //OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
             //OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
         }
@@ -120,12 +120,27 @@ fun GameScreen(
 @Composable
 private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
+    username : String?,
+    gameId : String
     ) {
     Row(
         modifier = Modifier
             .align(Alignment.BottomCenter),
     ) {
         val spacermod = Modifier.width(12.dp)
+
+        Button(
+            onClick = {
+                username?.let { name ->
+                    gameVm.move(gameId, name, gameVm.selectedStation, gameVm.selectedTicket.toString())//TODO correct String
+                    Thread.sleep(2000L)
+                    gameVm.fetchMrXPosition(gameId, username)
+                }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
+        ) {
+            Text("Confirm")
+        }
 
         SelectableDoubleTicket(gameVm = gameVm)
         Spacer(spacermod)
@@ -254,7 +269,7 @@ fun Map(
                     allowedMoves.forEach { move -> if(id in move.keys) allowed = true}
 
                     Button(
-                        onClick = { /* handle click */ },
+                        onClick = { gameVm.selectedStation = id },
                         modifier = Modifier
                             .offset(
                                 x = xDp - buttonSizeDp / 2,
@@ -265,9 +280,10 @@ fun Map(
                                 color = if (allowed) Color.Blue else Color.Transparent,
                                 shape = RoundedCornerShape(8.dp)
                             )
-
                             .size(buttonSizeDp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+
+                        colors = ButtonDefaults.buttonColors(containerColor = if(gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
+                        enabled = allowed
 
                     ) {
                         // Optional content

@@ -1,5 +1,6 @@
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -37,6 +38,8 @@ class GameViewModel(
     var scale : Float by mutableFloatStateOf(1f)
 
     var selectedTicket : Ticket? by mutableStateOf(null)
+
+    var selectedStation : Int by mutableIntStateOf(0)
 
     var isDoubleMoveMode by mutableStateOf(false)
 
