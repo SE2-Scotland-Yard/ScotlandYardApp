@@ -34,6 +34,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
+import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +56,7 @@ fun GameScreen(
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
     val scale by remember { derivedStateOf { gameVm.scale } }
+    val selectedTicket by remember { derivedStateOf { gameVm.selectedTicket } }
 
     var expanded by remember { mutableStateOf(false) }
     var selectedMove by remember { mutableStateOf<Int?>(null) }
@@ -109,34 +111,31 @@ fun GameScreen(
 
             Map(gameVm, useSmallMap, allowedMoves)
             BottomBar(gameVm)
-            OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
-            OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
+            //OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
+            //OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
         }
     }
 }
 
 @Composable
-private fun BoxScope.BottomBar(gameVm: GameViewModel) {
+private fun BoxScope.BottomBar(
+    gameVm: GameViewModel,
+    ) {
     Row(
         modifier = Modifier
             .align(Alignment.BottomCenter),
     ) {
         val spacermod = Modifier.width(12.dp)
 
-        SelectableImage(imageRes = R.drawable.ticket_double, isSelected = true) { }
-
+        SelectableDoubleTicket(gameVm = gameVm)
         Spacer(spacermod)
-
-        SelectableImage(imageRes = R.drawable.ticket_black, isSelected = true) {}
-
+        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_black, ticket = Ticket.BLACK)
         Spacer(spacermod)
-        SelectableImage(imageRes = R.drawable.ticket_taxi, isSelected = true) {}
-
+        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_taxi, ticket = Ticket.TAXI)
         Spacer(spacermod)
-        SelectableImage(imageRes = R.drawable.ticket_bus, isSelected = true) {}
-
+        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_bus, ticket = Ticket.BUS)
         Spacer(spacermod)
-        SelectableImage(imageRes = R.drawable.ticket_under, isSelected = true) {}
+        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_under, ticket = Ticket.UNDERGROUND)
         Spacer(spacermod)
 
 
@@ -160,20 +159,20 @@ private fun BoxScope.BottomBar(gameVm: GameViewModel) {
 }
 
 @Composable
-fun SelectableImage(
+fun SelectableTicket(
+    gameVm: GameViewModel,
     imageRes: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit
+    ticket: Ticket,
 ) {
     Box(
         modifier = Modifier
             .padding(8.dp)
             .border(
-                width = if (isSelected) 3.dp else 0.dp,
-                color = if (isSelected) Color.Blue else Color.Transparent,
+                width = if (gameVm.selectedTicket == ticket) 3.dp else 0.dp,
+                color = if (gameVm.selectedTicket == ticket) Color.Blue else Color.Transparent,
                 shape = RoundedCornerShape(8.dp)
             )
-            .clickable { onClick() }
+            .clickable { gameVm.selectedTicket = ticket }
     ) {
         Image(
             painter = painterResource(id = imageRes),
@@ -182,6 +181,26 @@ fun SelectableImage(
     }
 }
 
+@Composable
+fun SelectableDoubleTicket(
+    gameVm: GameViewModel
+) {
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .border(
+                width = if (gameVm.isDoubleMoveMode) 3.dp else 0.dp,
+                color = if (gameVm.isDoubleMoveMode) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable { gameVm.isDoubleMoveMode = !gameVm.isDoubleMoveMode }
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ticket_double),
+            contentDescription = null,
+        )
+    }
+}
 
 @Composable
 fun Map(

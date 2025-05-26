@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
+import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 import kotlinx.coroutines.launch
 
 
@@ -34,6 +35,8 @@ class GameViewModel(
     val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions()
 
     var scale : Float by mutableFloatStateOf(1f)
+
+    var selectedTicket : Ticket? by mutableStateOf(null)
 
     var isDoubleMoveMode by mutableStateOf(false)
 
