@@ -2,6 +2,7 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,9 +19,12 @@ import com.example.myapplication.R
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -92,8 +96,16 @@ fun GameScreen(
             modifier = Modifier
                 .padding(padding)
         ) {
+
             Map(gameVm, useSmallMap, allowedMoves)
-            BottomBar(gameVm, username, gameId)
+            BottomBar(gameVm, username, gameId, isMyTurn)
+            Box(modifier = Modifier
+                .padding(2.dp)
+                .align(Alignment.TopStart)
+                .background(color = colorResource(R.color.buttonBlue))
+            ){
+                Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
+            }
         }
     }
 }
@@ -102,7 +114,8 @@ fun GameScreen(
 private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
     username: String?,
-    gameId: String
+    gameId: String,
+    isMyTurn : Boolean
 ) {
     Row(modifier = Modifier.align(Alignment.BottomCenter)) {
         //Confirm Button
@@ -119,7 +132,8 @@ private fun BoxScope.BottomBar(
                     gameVm.fetchMrXPosition(gameId, username)
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue)),
+            enabled = isMyTurn
         ) {
             Text("Confirm")
         }
@@ -252,7 +266,7 @@ private fun Stations(
     density: Density,
     allowedMoves: List<AllowedMoveResponse>
 ) {
-    val buttonSizeDp = (15 * gameVm.scale).dp
+    val buttonSizeDp = (1 * gameVm.scale).dp
 
     points.forEach { (id, pos) ->
         val (xPx, yPx) = pos
@@ -273,7 +287,8 @@ private fun Stations(
                 .border(
                     width = if (allowed) 3.dp else 0.dp, // TODO add check for selected ticket
                     color = if (allowed) Color.Blue else Color.Transparent,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = CircleShape,
+
                 ),
             colors = ButtonDefaults.buttonColors(containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
             enabled = allowed
