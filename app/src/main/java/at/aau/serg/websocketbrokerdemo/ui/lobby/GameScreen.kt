@@ -1,10 +1,7 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
-import android.graphics.Paint
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,22 +15,16 @@ import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.zIndex
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.Density
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
-import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,18 +46,12 @@ fun GameScreen(
     val error by remember { derivedStateOf { gameVm.errorMessage } }
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
-    val scale by remember { derivedStateOf { gameVm.scale } }
-    val selectedTicket by remember { derivedStateOf { gameVm.selectedTicket } }
-
-    var expanded by remember { mutableStateOf(false) }
-    var selectedMove by remember { mutableStateOf<Int?>(null) }
 
     //States für DoubleMove
     var firstMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
     var secondMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
     var expandedFirstMove by remember { mutableStateOf(false) }
     var expandedSecondMove by remember { mutableStateOf(false) }
-
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
@@ -96,7 +81,6 @@ fun GameScreen(
         }
     }
 
-
     Scaffold { padding ->
         Image(
             modifier = Modifier.fillMaxSize(),
@@ -108,11 +92,8 @@ fun GameScreen(
             modifier = Modifier
                 .padding(padding)
         ) {
-
             Map(gameVm, useSmallMap, allowedMoves)
-            BottomBar(gameVm, username,gameId)
-            //OverlayLeft(username, userSessionVm, mrXPosition, gameUpdate, message, gameId)
-            //OverlayRight(error, expanded, isMyTurn, selectedMove, allowedMoves, username, gameVm, gameId )
+            BottomBar(gameVm, username, gameId)
         }
     }
 }
@@ -120,19 +101,20 @@ fun GameScreen(
 @Composable
 private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
-    username : String?,
-    gameId : String
-    ) {
-    Row(
-        modifier = Modifier
-            .align(Alignment.BottomCenter),
-    ) {
-        val spacermod = Modifier.width(12.dp)
-
+    username: String?,
+    gameId: String
+) {
+    Row(modifier = Modifier.align(Alignment.BottomCenter)) {
+        //Confirm Button
         Button(
             onClick = {
                 username?.let { name ->
-                    gameVm.move(gameId, name, gameVm.selectedStation, gameVm.selectedTicket.toString())//TODO correct String
+                    gameVm.move(
+                        gameId,
+                        name,
+                        gameVm.selectedStation,
+                        gameVm.selectedTicket.toString()
+                    )//TODO correct String
                     Thread.sleep(2000L)
                     gameVm.fetchMrXPosition(gameId, username)
                 }
@@ -142,6 +124,8 @@ private fun BoxScope.BottomBar(
             Text("Confirm")
         }
 
+        // Tickets
+        val spacermod = Modifier.width(12.dp)
         SelectableDoubleTicket(gameVm = gameVm)
         Spacer(spacermod)
         SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_black, ticket = Ticket.BLACK)
@@ -150,10 +134,14 @@ private fun BoxScope.BottomBar(
         Spacer(spacermod)
         SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_bus, ticket = Ticket.BUS)
         Spacer(spacermod)
-        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_under, ticket = Ticket.UNDERGROUND)
+        SelectableTicket(
+            gameVm = gameVm,
+            imageRes = R.drawable.ticket_under,
+            ticket = Ticket.UNDERGROUND
+        )
         Spacer(spacermod)
 
-
+        //Zoom
         Button(
             onClick = { gameVm.increaseZoom() },
             colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
@@ -168,8 +156,6 @@ private fun BoxScope.BottomBar(
         ) {
             Text("-")
         }
-
-
     }
 }
 
@@ -222,7 +208,7 @@ fun Map(
     gameVm: GameViewModel,
     useSmallMap: Boolean,
     allowedMoves: List<AllowedMoveResponse>,
-    ) {
+) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
     val points = gameVm.pointPositions
@@ -234,12 +220,7 @@ fun Map(
     val virtualWidthDp = with(density) { (intrinsicSize.width * gameVm.scale).toDp() }
     val virtualHeightDp = with(density) { (intrinsicSize.height * gameVm.scale).toDp() }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-
-    ) {
-
+    Box(modifier = Modifier.fillMaxSize()) {
         // Scrollable container
         Box(
             modifier = Modifier
@@ -258,39 +239,45 @@ fun Map(
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.fillMaxSize()
                 )
-
-                val buttonSizeDp = (15*gameVm.scale).dp
-
-                points.forEach { (id, pos) ->
-                    val (xPx, yPx) = pos
-                    val xDp = with(density) { (xPx * gameVm.scale).toDp() }
-                    val yDp = with(density) { (yPx * gameVm.scale).toDp() }
-                    var allowed = false
-                    allowedMoves.forEach { move -> if(id in move.keys) allowed = true}
-
-                    Button(
-                        onClick = { gameVm.selectedStation = id },
-                        modifier = Modifier
-                            .offset(
-                                x = xDp - buttonSizeDp / 2,
-                                y = yDp - buttonSizeDp / 2
-                            )
-                            .border(
-                                width = if (allowed) 3.dp else 0.dp,
-                                color = if (allowed) Color.Blue else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .size(buttonSizeDp),
-
-                        colors = ButtonDefaults.buttonColors(containerColor = if(gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
-                        enabled = allowed
-
-                    ) {
-                        // Optional content
-                    }
-                }
+                Stations(gameVm, points, density, allowedMoves)
             }
         }
+    }
+}
+
+@Composable
+private fun Stations(
+    gameVm: GameViewModel,
+    points: Map<Int, Pair<Int, Int>>,
+    density: Density,
+    allowedMoves: List<AllowedMoveResponse>
+) {
+    val buttonSizeDp = (15 * gameVm.scale).dp
+
+    points.forEach { (id, pos) ->
+        val (xPx, yPx) = pos
+        val xDp = with(density) { (xPx * gameVm.scale).toDp() }
+        val yDp = with(density) { (yPx * gameVm.scale).toDp() }
+
+        var allowed = false
+        allowedMoves.forEach { move -> if (id in move.keys) allowed = true }
+
+        Button(
+            onClick = { gameVm.selectedStation = id },
+            modifier = Modifier
+                .size(buttonSizeDp)
+                .offset(
+                    x = xDp - buttonSizeDp / 2,
+                    y = yDp - buttonSizeDp / 2
+                )
+                .border(
+                    width = if (allowed) 3.dp else 0.dp, // TODO add check for selected ticket
+                    color = if (allowed) Color.Blue else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                ),
+            colors = ButtonDefaults.buttonColors(containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
+            enabled = allowed
+        ) {}
     }
 }
 
