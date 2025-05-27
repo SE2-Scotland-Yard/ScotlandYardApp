@@ -1,6 +1,7 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
+import android.graphics.Color.alpha
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,9 +23,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -51,6 +50,7 @@ fun GameScreen(
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
 
+    //TODO import Double move from old Gamescreen
     //States für DoubleMove
     var firstMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
     var secondMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
@@ -99,12 +99,41 @@ fun GameScreen(
 
             Map(gameVm, useSmallMap, allowedMoves)
             BottomBar(gameVm, username, gameId, isMyTurn)
+            
+            //TODO show last MrX Position when revealed
             Box(modifier = Modifier
                 .padding(2.dp)
                 .align(Alignment.TopStart)
-                .background(color = colorResource(R.color.buttonBlue))
+                .background(color = colorResource(R.color.buttonBlue).copy(alpha = 0.5f))
             ){
-                Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
+                Column {
+                    Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
+
+                    //Placeholder Text
+                    // TODO replace Text with showing Players in Board
+                    Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Spacer(Modifier.height(8.dp))
+
+                    if (userSessionVm.role.value == "MRX") {
+                        mrXPosition?.let {
+                            Text("MrX steht auf: $it", color = Color.White)
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        gameUpdate?.playerPositions?.forEach { (name, pos) ->
+                            Text("$name steht auf Feld $pos", color = Color.White)
+                        }
+                    } else {
+                        gameUpdate?.playerPositions?.forEach { (name, pos) ->
+                            Text("$name steht auf Feld $pos", color = Color.White)
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    val myPosition = gameUpdate?.playerPositions?.get(username)
+                    myPosition?.let {
+                        Spacer(Modifier.height(16.dp))
+                        Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                        Spacer(Modifier.height(16.dp))
+                    }                }
             }
         }
     }
@@ -127,7 +156,7 @@ private fun BoxScope.BottomBar(
                         name,
                         gameVm.selectedStation,
                         gameVm.selectedTicket.toString()
-                    )//TODO correct String
+                    )
                     Thread.sleep(2000L)
                     gameVm.fetchMrXPosition(gameId, username)
                 }
@@ -247,6 +276,8 @@ fun Map(
                 modifier = Modifier
                     .size(virtualWidthDp, virtualHeightDp)
             ) {
+                //INFO: hier kommt alles rein, ws mit der Map Skalieren soll
+
                 Image(
                     painter = mapPainter,
                     contentDescription = "Map",
@@ -285,7 +316,7 @@ private fun Stations(
                     y = yDp - buttonSizeDp / 2
                 )
                 .border(
-                    width = if (allowed) 3.dp else 0.dp, // TODO add check for selected ticket
+                    width = if (allowed) 3.dp else 0.dp, // TODO indicator for which moves are for which ticket
                     color = if (allowed) Color.Blue else Color.Transparent,
                     shape = CircleShape,
 
