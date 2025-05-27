@@ -1,8 +1,11 @@
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
@@ -15,7 +18,8 @@ import kotlinx.coroutines.launch
 
 
 class GameViewModel(
-    private val repository: GameRepository = GameRepository()
+    private val repository: GameRepository = GameRepository(),
+    context: Context
 ) : ViewModel() {
 
     var message by mutableStateOf("")
@@ -33,7 +37,7 @@ class GameViewModel(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions()
+    val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions(context)
 
     var scale : Float by mutableFloatStateOf(1f)
 
