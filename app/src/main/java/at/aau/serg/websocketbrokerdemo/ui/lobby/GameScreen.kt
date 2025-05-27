@@ -1,28 +1,34 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
+import android.graphics.Color.alpha
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
-import androidx.compose.ui.unit.sp
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
-
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
+import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,15 +50,12 @@ fun GameScreen(
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
 
-    var expanded by remember { mutableStateOf(false) }
-    var selectedMove by remember { mutableStateOf<Int?>(null) }
-
+    //TODO import Double move from old Gamescreen
     //States für DoubleMove
     var firstMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
     var secondMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
     var expandedFirstMove by remember { mutableStateOf(false) }
     var expandedSecondMove by remember { mutableStateOf(false) }
-
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
@@ -82,279 +85,248 @@ fun GameScreen(
         }
     }
 
-
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Game $gameId") })
-        }
-    ) { padding ->
-        Row(
+    Scaffold { padding ->
+        Image(
+            modifier = Modifier.fillMaxSize(),
+            painter = painterResource(R.drawable.background1),
+            contentDescription = "background",
+            contentScale = ContentScale.Crop
+        )
+        Box(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Linke Seite: Spielerstatus
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            ) {
-                username?.let {
-                    Text("Eingeloggt als: $it", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(16.dp))
-                }
-                userSessionVm.role.value?.let {
-                    Text("Du bist: $it", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(16.dp))
-                }
 
-                Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(8.dp))
+            Map(gameVm, useSmallMap, allowedMoves)
+            BottomBar(gameVm, username, gameId, isMyTurn)
+            
+            //TODO show last MrX Position when revealed
+            Box(modifier = Modifier
+                .padding(2.dp)
+                .align(Alignment.TopStart)
+                .background(color = colorResource(R.color.buttonBlue).copy(alpha = 0.5f))
+            ){
+                Column {
+                    Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
 
+                    //Placeholder Text
+                    // TODO replace Text with showing Players in Board
+                    Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Spacer(Modifier.height(8.dp))
 
-                if (userSessionVm.role.value == "MRX") {
-                    mrXPosition?.let {
-                        Text("MrX steht auf: $it")
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                        Text("$name steht auf Feld $pos")
-                    }
-                } else {
-                    gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                        Text("$name steht auf Feld $pos")
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-                val myPosition = gameUpdate?.playerPositions?.get(username)
-                myPosition?.let {
-                    Spacer(Modifier.height(16.dp))
-                    Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // Hier wird die Nachricht angezeigt
-                if (message.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
-                    Text(message, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-            //Map
-
-            var scale by remember { mutableFloatStateOf(1f) }
-            var offsetX by remember { mutableFloatStateOf(0f) }
-            var offsetY by remember { mutableFloatStateOf(0f) }
-            val points = gameVm.pointPositions
-
-            Box(
-                modifier = Modifier
-                    .weight(3f)
-                    .background(color = colorResource(R.color.light_blue_900))
-                    .clipToBounds()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 5f)
-                            offsetX += pan.x
-                            offsetY += pan.y
+                    if (userSessionVm.role.value == "MRX") {
+                        mrXPosition?.let {
+                            Text("MrX steht auf: $it", color = Color.White)
                         }
-                    }
-            ) {
-                Image(
-                    painter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map),
-                    contentDescription = "Scotland Yard Map",
-                    modifier = Modifier
-                        .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offsetX,
-                            translationY = offsetY
-                        )
-
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.BottomEnd
-                ) {
-                    Button(
-                        onClick = {
-                            scale = 1f
-                            offsetX = 0f
-                            offsetY = 0f
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonStartScreen)),
-                        modifier = Modifier
-                    ) {
-                        Text(text = "Reset Zoom", fontSize = 12.sp)
-                    }
-                }
-            }
-
-            // Rechte Seite: Auswahl & Bewegung
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                ) {
-                    Text("Erlaubte Züge:", style = MaterialTheme.typography.titleMedium)
-
-                    if (error != null) {
-                        Text("Fehler: $error", color = MaterialTheme.colorScheme.error)
-                    } else {
-                        Box {
-                            Button(
-                                onClick = { expanded = true },
-                                enabled = isMyTurn
-                            ) {
-                                Text(selectedMove?.let { "Feld $it gewählt" } ?: "Zugziel wählen")
-                            }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                if (allowedMoves.isEmpty()) {
-                                    DropdownMenuItem(
-                                        text = { Text("Keine Züge verfügbar") },
-                                        onClick = { expanded = false }
-                                    )
-                                } else {
-                                    allowedMoves.forEach { move ->
-                                        val ticketId = move.keys.first()
-                                        val ticketType = move.values.first()
-                                        DropdownMenuItem(
-                                            text = { Text("$ticketType (Position zu: $ticketId)") },
-                                            onClick = {
-                                                selectedMove = ticketId
-                                                expanded = false
-                                                username?.let { name ->
-                                                    gameVm.move(gameId, name, ticketId, ticketType)
-                                                    Thread.sleep(2000L)
-                                                    gameVm.fetchMrXPosition(gameId, name)
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
                         Spacer(Modifier.height(16.dp))
-
-                        if (userSessionVm.role.value == "MRX") {
-                            Button(
-                                onClick = {
-                                    gameVm.updateDoubleMoveMode(!isDoubleMoveMode)
-                                    firstMoveSelected = null
-                                    secondMoveSelected = null
-                                    selectedMove = null
-                                },
-                                enabled = isMyTurn,
-
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(if (isDoubleMoveMode) "Doppelzugmodus deaktivieren" else "Doppelzugmodus aktivieren")
-                            }
-
-                            Spacer(Modifier.height(24.dp))
-
-                            if (isDoubleMoveMode) {
-                                // Erster Zug
-                                Box {
-                                    Button(onClick = { expandedFirstMove = true }) {
-                                        Text(firstMoveSelected?.let { "Erster Zug: Feld ${it.firstTo}" }
-                                            ?: "Ersten Zug wählen")
-                                    }
-                                    DropdownMenu(
-                                        expanded = expandedFirstMove,
-                                        onDismissRequest = { expandedFirstMove = false }) {
-                                        if (allowedDoubleMoves.isEmpty()) {
-                                            DropdownMenuItem(
-                                                text = { Text("Keine Doppelzüge verfügbar") },
-                                                onClick = { expandedFirstMove = false }
-                                            )
-                                        } else {
-                                            allowedDoubleMoves.forEach { move ->
-                                                DropdownMenuItem(
-                                                    text = { Text("Feld ${move.firstTo} mit ${move.firstTicket}") },
-                                                    onClick = {
-                                                        firstMoveSelected = move
-                                                        expandedFirstMove = false
-                                                        secondMoveSelected = null
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Spacer(Modifier.height(16.dp))
-
-                                if (firstMoveSelected != null) {
-                                    Box {
-                                        Button(onClick = { expandedSecondMove = true }) {
-                                            Text(secondMoveSelected?.let { "Zweiter Zug: Feld ${it.secondTo}" }
-                                                ?: "Zweiten Zug wählen")
-                                        }
-                                        DropdownMenu(
-                                            expanded = expandedSecondMove,
-                                            onDismissRequest = { expandedSecondMove = false }) {
-                                            allowedDoubleMoves
-                                                .filter {
-                                                    it.firstTo == firstMoveSelected!!.firstTo &&
-                                                            it.firstTicket == firstMoveSelected!!.firstTicket
-                                                }
-                                                .forEach { move ->
-                                                    DropdownMenuItem(
-                                                        text = { Text("Feld ${move.secondTo} mit ${move.secondTicket}") },
-                                                        onClick = {
-                                                            secondMoveSelected = move
-                                                            expandedSecondMove = false
-                                                        }
-                                                    )
-                                                }
-                                        }
-                                    }
-                                }
-
-                                Spacer(Modifier.height(16.dp))
-
-                                Button(
-                                    onClick = {
-                                        if (firstMoveSelected != null && secondMoveSelected != null && username != null) {
-                                            gameVm.moveDouble(
-                                                gameId,
-                                                username,
-                                                firstMoveSelected!!.firstTo,
-                                                firstMoveSelected!!.firstTicket,
-                                                secondMoveSelected!!.secondTo,
-                                                secondMoveSelected!!.secondTicket
-                                            )
-                                            gameVm.fetchMrXPosition(gameId, username)
-                                            gameVm.fetchAllowedDoubleMoves(gameId, username)
-                                            gameVm.updateDoubleMoveMode(false)
-                                            firstMoveSelected = null
-                                            secondMoveSelected = null
-                                        }
-                                    },
-                                    enabled = firstMoveSelected != null && secondMoveSelected != null
-                                ) {
-                                    Text("Doppelzug ausführen")
-                                }
-                            }
+                        gameUpdate?.playerPositions?.forEach { (name, pos) ->
+                            Text("$name steht auf Feld $pos", color = Color.White)
+                        }
+                    } else {
+                        gameUpdate?.playerPositions?.forEach { (name, pos) ->
+                            Text("$name steht auf Feld $pos", color = Color.White)
                         }
                     }
-                }
+                    Spacer(Modifier.height(4.dp))
+                    val myPosition = gameUpdate?.playerPositions?.get(username)
+                    myPosition?.let {
+                        Spacer(Modifier.height(16.dp))
+                        Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                        Spacer(Modifier.height(16.dp))
+                    }                }
             }
-
         }
     }
 }
+
+@Composable
+private fun BoxScope.BottomBar(
+    gameVm: GameViewModel,
+    username: String?,
+    gameId: String,
+    isMyTurn : Boolean
+) {
+    Row(modifier = Modifier.align(Alignment.BottomCenter)) {
+        //Confirm Button
+        Button(
+            onClick = {
+                username?.let { name ->
+                    gameVm.move(
+                        gameId,
+                        name,
+                        gameVm.selectedStation,
+                        gameVm.selectedTicket.toString()
+                    )
+                    Thread.sleep(2000L)
+                    gameVm.fetchMrXPosition(gameId, username)
+                }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue)),
+            enabled = isMyTurn
+        ) {
+            Text("Confirm")
+        }
+
+        // Tickets
+        val spacermod = Modifier.width(12.dp)
+        SelectableDoubleTicket(gameVm = gameVm)
+        Spacer(spacermod)
+        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_black, ticket = Ticket.BLACK)
+        Spacer(spacermod)
+        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_taxi, ticket = Ticket.TAXI)
+        Spacer(spacermod)
+        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_bus, ticket = Ticket.BUS)
+        Spacer(spacermod)
+        SelectableTicket(
+            gameVm = gameVm,
+            imageRes = R.drawable.ticket_under,
+            ticket = Ticket.UNDERGROUND
+        )
+        Spacer(spacermod)
+
+        //Zoom
+        Button(
+            onClick = { gameVm.increaseZoom() },
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
+        ) {
+            Text("+")
+        }
+        Spacer(spacermod)
+
+        Button(
+            onClick = { gameVm.decreaseZoom() },
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
+        ) {
+            Text("-")
+        }
+    }
+}
+
+@Composable
+fun SelectableTicket(
+    gameVm: GameViewModel,
+    imageRes: Int,
+    ticket: Ticket,
+) {
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .border(
+                width = if (gameVm.selectedTicket == ticket) 3.dp else 0.dp,
+                color = if (gameVm.selectedTicket == ticket) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable { gameVm.selectedTicket = ticket }
+    ) {
+        Image(
+            painter = painterResource(id = imageRes),
+            contentDescription = null,
+        )
+    }
+}
+
+@Composable
+fun SelectableDoubleTicket(
+    gameVm: GameViewModel
+) {
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .border(
+                width = if (gameVm.isDoubleMoveMode) 3.dp else 0.dp,
+                color = if (gameVm.isDoubleMoveMode) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable { gameVm.isDoubleMoveMode = !gameVm.isDoubleMoveMode }
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ticket_double),
+            contentDescription = null,
+        )
+    }
+}
+
+@Composable
+fun Map(
+    gameVm: GameViewModel,
+    useSmallMap: Boolean,
+    allowedMoves: List<AllowedMoveResponse>,
+) {
+    val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
+    val intrinsicSize = mapPainter.intrinsicSize
+    val points = gameVm.pointPositions
+
+    val scrollStateX = rememberScrollState()
+    val scrollStateY = rememberScrollState()
+
+    val density = LocalDensity.current
+    val virtualWidthDp = with(density) { (intrinsicSize.width * gameVm.scale).toDp() }
+    val virtualHeightDp = with(density) { (intrinsicSize.height * gameVm.scale).toDp() }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Scrollable container
+        Box(
+            modifier = Modifier
+                .horizontalScroll(scrollStateX)
+                .verticalScroll(scrollStateY)
+                .align(Alignment.Center)
+        ) {
+            // Content sized to scaled dimensions
+            Box(
+                modifier = Modifier
+                    .size(virtualWidthDp, virtualHeightDp)
+            ) {
+                //INFO: hier kommt alles rein, ws mit der Map Skalieren soll
+
+                Image(
+                    painter = mapPainter,
+                    contentDescription = "Map",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Stations(gameVm, points, density, allowedMoves)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Stations(
+    gameVm: GameViewModel,
+    points: Map<Int, Pair<Int, Int>>,
+    density: Density,
+    allowedMoves: List<AllowedMoveResponse>
+) {
+    val buttonSizeDp = (1 * gameVm.scale).dp
+
+    points.forEach { (id, pos) ->
+        val (xPx, yPx) = pos
+        val xDp = with(density) { (xPx * gameVm.scale).toDp() }
+        val yDp = with(density) { (yPx * gameVm.scale).toDp() }
+
+        var allowed = false
+        allowedMoves.forEach { move -> if (id in move.keys) allowed = true }
+
+        Button(
+            onClick = { gameVm.selectedStation = id },
+            modifier = Modifier
+                .size(buttonSizeDp)
+                .offset(
+                    x = xDp - buttonSizeDp / 2,
+                    y = yDp - buttonSizeDp / 2
+                )
+                .border(
+                    width = if (allowed) 3.dp else 0.dp, // TODO indicator for which moves are for which ticket
+                    color = if (allowed) Color.Blue else Color.Transparent,
+                    shape = CircleShape,
+
+                ),
+            colors = ButtonDefaults.buttonColors(containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
+            enabled = allowed
+        ) {}
+    }
+}
+
+
 
 

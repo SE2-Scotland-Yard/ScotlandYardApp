@@ -123,7 +123,7 @@ class LobbyActivity : ComponentActivity() {
                         gameId = id,
                         lobbyVm = lobbyVm,
                         userSessionVm = userSessionVm,
-                        gameVm = GameViewModel()
+                        gameVm = GameViewModel(context = this)
                     )
                 }
             }
