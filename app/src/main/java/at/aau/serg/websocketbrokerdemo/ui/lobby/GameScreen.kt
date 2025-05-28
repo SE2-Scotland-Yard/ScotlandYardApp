@@ -2,6 +2,7 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import android.graphics.Color.alpha
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,13 +23,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
+import kotlinx.coroutines.delay
+import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +65,8 @@ fun GameScreen(
     var secondMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
     var expandedFirstMove by remember { mutableStateOf(false) }
     var expandedSecondMove by remember { mutableStateOf(false) }
+    val playerPositions: Map<String, Int> = gameUpdate?.playerPositions ?: emptyMap()
+
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
@@ -85,6 +96,16 @@ fun GameScreen(
         }
     }
 
+    LaunchedEffect(gameUpdate) {
+        if (username != null) {
+
+            gameVm.fetchMrXPosition(gameId, username)
+            if (userSessionVm.role.value == "MRX") {
+                gameVm.fetchAllowedDoubleMoves(gameId, username)
+            }
+        }
+    }
+
     Scaffold { padding ->
         Image(
             modifier = Modifier.fillMaxSize(),
@@ -97,9 +118,9 @@ fun GameScreen(
                 .padding(padding)
         ) {
 
-            Map(gameVm, useSmallMap, allowedMoves)
+            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition)
             BottomBar(gameVm, username, gameId, isMyTurn)
-            
+
             //TODO show last MrX Position when revealed
             Box(modifier = Modifier
                 .padding(2.dp)
@@ -145,6 +166,7 @@ private fun BoxScope.BottomBar(
     username: String?,
     gameId: String,
     isMyTurn : Boolean
+
 ) {
     Row(modifier = Modifier.align(Alignment.BottomCenter)) {
         //Confirm Button
@@ -251,6 +273,12 @@ fun Map(
     gameVm: GameViewModel,
     useSmallMap: Boolean,
     allowedMoves: List<AllowedMoveResponse>,
+    gameId:String,
+    username: String?,
+    playerPositions: Map<String, Int>,
+    isMyTurn : Boolean,
+    userSessionVm: UserSessionViewModel,
+    mrXPosition: Int?
 ) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
@@ -284,7 +312,8 @@ fun Map(
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.fillMaxSize()
                 )
-                Stations(gameVm, points, density, allowedMoves)
+                Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
+                PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition)
             }
         }
     }
@@ -295,35 +324,156 @@ private fun Stations(
     gameVm: GameViewModel,
     points: Map<Int, Pair<Int, Int>>,
     density: Density,
-    allowedMoves: List<AllowedMoveResponse>
+    allowedMoves: List<AllowedMoveResponse>,
+    gameId: String,
+    username: String?,
+    isMyTurn : Boolean
 ) {
+    if (!isMyTurn) return
     val buttonSizeDp = (1 * gameVm.scale).dp
+
+    val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
+
 
     points.forEach { (id, pos) ->
         val (xPx, yPx) = pos
         val xDp = with(density) { (xPx * gameVm.scale).toDp() }
         val yDp = with(density) { (yPx * gameVm.scale).toDp() }
 
-        var allowed = false
-        allowedMoves.forEach { move -> if (id in move.keys) allowed = true }
+        // Filter moves that involve the current station
+        val movesForStation = allowedMoves.filter { move ->
+            try {
+                move.keys.contains(id)
+            } catch (e: Exception) {
+                println("Error checking moves for station $id: ${e.message}")
+                false
+            }
+        }
 
-        Button(
-            onClick = { gameVm.selectedStation = id },
+        val hasMoves = movesForStation.isNotEmpty()
+
+
+        Box(
             modifier = Modifier
-                .size(buttonSizeDp)
-                .offset(
-                    x = xDp - buttonSizeDp / 2,
-                    y = yDp - buttonSizeDp / 2
-                )
-                .border(
-                    width = if (allowed) 3.dp else 0.dp, // TODO indicator for which moves are for which ticket
-                    color = if (allowed) Color.Blue else Color.Transparent,
-                    shape = CircleShape,
-
+                .offset(x = xDp - buttonSizeDp / 2, y = yDp - buttonSizeDp / 2)
+        ) {
+            Button(
+                onClick = {
+                    gameVm.selectedStation = id
+                    expandedStates[id] = hasMoves
+                },
+                modifier = Modifier
+                    .size(buttonSizeDp)
+                    .border(
+                        width = if (hasMoves) 3.dp else 0.dp,
+                        color = if (hasMoves) Color.Blue else Color.Transparent,
+                        shape = CircleShape
+                    ),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent
                 ),
-            colors = ButtonDefaults.buttonColors(containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
-            enabled = allowed
-        ) {}
+                enabled = hasMoves
+
+            ) {}
+
+            if (hasMoves && (expandedStates[id] ?: false)) {
+                DropdownMenu(
+                    expanded = true,
+                    onDismissRequest = { expandedStates[id] = false },
+                    modifier = Modifier.background(Color.White)
+                ) {
+                    movesForStation.forEach { move ->
+
+
+                            val (targetStation, ticketType) = when {
+                                move.keys.size >= 2 -> {
+                                    val target = move.keys.firstOrNull { it != id } ?: -1
+                                    val ticket = move.values.firstOrNull() ?: ""
+                                    target to ticket
+                                }
+                                else -> {
+                                    move.keys.firstOrNull()?.let { key ->
+                                        key to (move[key] ?: "")
+                                    } ?: (-1 to "")
+                                }
+                            }
+
+                            if (targetStation != -1 && ticketType.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("$ticketType → Station $targetStation") },
+                                    onClick = {
+                                        username?.let { name ->
+                                            gameVm.move(gameId, name, targetStation, ticketType)
+                                            expandedStates[id] = false
+                                        }
+                                    }
+                                )
+                            }
+
+                    }
+                }
+            }
+        }
+    }
+
+}@Composable
+private fun PlayerPositions(
+    gameVm: GameViewModel,
+    points: Map<Int, Pair<Int, Int>>,
+    density: Density,
+    playerPositions: Map<String, Int>,
+    userSessionVm: UserSessionViewModel,
+    mrXPosition: Int?
+) {
+    val iconSizeDp = (30 * gameVm.scale).dp
+
+
+    val playerIcons = listOf(
+        R.drawable.blue,
+        R.drawable.green,
+        R.drawable.purple,
+        R.drawable.red
+    )
+
+    fun getIconForPlayer(name: String): Int {
+        val hash = name.hashCode().absoluteValue
+        return playerIcons[hash % playerIcons.size]
+    }
+
+    // Normale Spieler-Icons für alle anzeigen
+    playerPositions.forEach { (playerName, positionId) ->
+        points[positionId]?.let { (xPx, yPx) ->
+            Image(
+                painter = painterResource(id = getIconForPlayer(playerName)),
+                contentDescription = "Position von $playerName",
+                modifier = Modifier
+                    .size(iconSizeDp)
+                    .offset(
+                        x = with(density) { (xPx * gameVm.scale).toDp() } - iconSizeDp / 2,
+                        y = with(density) { (yPx * gameVm.scale).toDp() } - iconSizeDp / 2
+                    ),
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+
+    // Mr.X Icon nur anzeigen, wenn der aktuelle Spieler Mr.X ist
+    if (userSessionVm.role.value == "MRX") {
+        mrXPosition?.let { positionId ->
+            points[positionId]?.let { (xPx, yPx) ->
+                Image(
+                    painter = painterResource(id = R.drawable.mrx),
+                    contentDescription = "Position von Mr.X",
+                    modifier = Modifier
+                        .size(iconSizeDp)
+                        .offset(
+                            x = with(density) { (xPx * gameVm.scale).toDp() } - iconSizeDp / 2,
+                            y = with(density) { (yPx * gameVm.scale).toDp() } - iconSizeDp / 2
+                        ),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
     }
 }
 
