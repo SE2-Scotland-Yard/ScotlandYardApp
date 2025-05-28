@@ -29,6 +29,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
+import kotlinx.coroutines.delay
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +56,8 @@ fun GameScreen(
     val error by remember { derivedStateOf { gameVm.errorMessage } }
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
+    var visibleTicket by remember { mutableStateOf<String?>(null) }
+
 
     //TODO import Double move from old Gamescreen
     //States für DoubleMove
@@ -84,6 +93,17 @@ fun GameScreen(
             }
         }
     }
+    //Verwendetes Ticket anzeigen
+    LaunchedEffect(gameUpdate) {
+        val ticket = gameUpdate?.lastTicketUsed
+        if (ticket != null) {
+            visibleTicket = ticket
+            delay(2000L)
+            visibleTicket = null
+        }
+    }
+
+
 
     Scaffold { padding ->
         Image(
@@ -99,7 +119,48 @@ fun GameScreen(
 
             Map(gameVm, useSmallMap, allowedMoves)
             BottomBar(gameVm, username, gameId, isMyTurn)
-            
+
+            val ticketImage = when (visibleTicket?.uppercase()) {
+                "TAXI" -> R.drawable.ticket_taxi
+                "BUS" -> R.drawable.ticket_bus
+                "UNDERGROUND" -> R.drawable.ticket_under
+                "BLACK" -> R.drawable.ticket_black
+                "DOUBLE" -> R.drawable.ticket_double
+                else -> null
+            }
+
+
+            AnimatedVisibility(
+                visible = visibleTicket != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ticketImage?.let {
+                            Image(
+                                painter = painterResource(id = it),
+                                contentDescription = visibleTicket,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = "Ticket verwendet: ${visibleTicket?.lowercase()?.replaceFirstChar { it.uppercase() }}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+
+
             //TODO show last MrX Position when revealed
             Box(modifier = Modifier
                 .padding(2.dp)
@@ -325,7 +386,10 @@ private fun Stations(
             enabled = allowed
         ) {}
     }
+
 }
+
+
 
 
 
