@@ -57,6 +57,9 @@ fun GameScreen(
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
     var visibleTicket by remember { mutableStateOf<String?>(null) }
+    var showMrXHistory by remember { mutableStateOf(false) }
+    var mrXHistory by remember { mutableStateOf<List<String>>(emptyList()) }
+
 
 
     //TODO import Double move from old Gamescreen
@@ -99,7 +102,7 @@ fun GameScreen(
         if (ticket != null) {
             visibleTicket = ticket
             delay(2000L)
-            visibleTicket = null
+            visibleTicket = ""
         }
     }
 
@@ -118,7 +121,26 @@ fun GameScreen(
         ) {
 
             Map(gameVm, useSmallMap, allowedMoves)
-            BottomBar(gameVm, username, gameId, isMyTurn)
+            BottomBar(
+                gameVm = gameVm,
+                username = username,
+                gameId = gameId,
+                isMyTurn = isMyTurn,
+                showMrXHistory = showMrXHistory,
+                onToggleHistory = {
+                    if (!showMrXHistory) {
+                        gameVm.fetchMrXHistory(gameId) { history ->
+                            mrXHistory = history
+                        }
+                    }
+                    showMrXHistory = !showMrXHistory
+                },
+                onUpdateHistory = { newHistory ->
+                    mrXHistory = newHistory
+                }
+            )
+
+
 
             val ticketImage = when (visibleTicket?.uppercase()) {
                 "TAXI" -> R.drawable.ticket_taxi
@@ -129,36 +151,95 @@ fun GameScreen(
                 else -> null
             }
 
-
+            //verwendetest Ticket anzeigen
             AnimatedVisibility(
-                visible = visibleTicket != null,
+                visible = !visibleTicket.isNullOrBlank(),
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ticketImage?.let {
-                            Image(
-                                painter = painterResource(id = it),
-                                contentDescription = visibleTicket,
-                                modifier = Modifier.size(32.dp)
+                if (!visibleTicket.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ticketImage?.let {
+                                Image(
+                                    painter = painterResource(id = it),
+                                    contentDescription = visibleTicket,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(
+                                text = "Ticket verwendet: ${visibleTicket?.lowercase()?.replaceFirstChar { it.uppercase() }}",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyLarge
                             )
-                            Spacer(Modifier.width(8.dp))
                         }
-                        Text(
-                            text = "Ticket verwendet: ${visibleTicket?.lowercase()?.replaceFirstChar { it.uppercase() }}",
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
                     }
                 }
             }
+
+            //MrX history
+            AnimatedVisibility(visible = showMrXHistory) {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(onClick = { showMrXHistory = false }) // Klick außerhalb =schließen
+                        .padding(16.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    // clicks auf dem overlay schließen das overlay nicht
+                    Box(
+                        modifier = Modifier
+                            .widthIn(min = 240.dp, max = 320.dp)
+                            .fillMaxHeight()
+                            .background(Color.Transparent) // wichtig!
+                            .clickable(enabled = false) {}, // blockiert Klickweitergabe
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxSize(),
+                            colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.85f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                Text(
+                                    text = "MrX Verlauf",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                                Spacer(Modifier.height(12.dp))
+
+                                mrXHistory.forEachIndexed { _, entry ->
+                                    Text(
+                                        text = entry,
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier
+                                            .padding(vertical = 4.dp)
+                                            .background(
+                                                color = Color.White.copy(alpha = 0.05f),
+                                                shape = RoundedCornerShape(6.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
+
 
 
             //TODO show last MrX Position when revealed
@@ -205,7 +286,10 @@ private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
     username: String?,
     gameId: String,
-    isMyTurn : Boolean
+    isMyTurn : Boolean,
+    showMrXHistory: Boolean,
+    onToggleHistory: () -> Unit,
+    onUpdateHistory: (List<String>) -> Unit
 ) {
     Row(modifier = Modifier.align(Alignment.BottomCenter)) {
         //Confirm Button
@@ -260,7 +344,31 @@ private fun BoxScope.BottomBar(
         ) {
             Text("-")
         }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Button(
+            onClick = {
+                println("MrX-Button gedrückt")
+                if (!showMrXHistory) {
+                    println("MrX-History wird angefragt")
+                    gameVm.fetchMrXHistory(gameId) { history ->
+                        println("Antwort: $history")
+                        onUpdateHistory(history)
+                    }
+                }
+                onToggleHistory()
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
+        ) {
+            Text(if (showMrXHistory) "Verlauf" else "Verlauf")
+        }
+
+
+
     }
+
+
 }
 
 @Composable

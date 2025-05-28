@@ -116,4 +116,16 @@ class GameViewModel(
         scale -= 0.1f
     }
 
+    fun fetchMrXHistory(gameId: String, onResult: (List<String>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val result = repository.getMrXHistory(gameId)
+                onResult(result)
+            } catch (e: Exception) {
+                errorMessage = "Fehler beim Laden des MrX-Verlaufs: ${e.message}"
+            }
+        }
+    }
+
+
 }
