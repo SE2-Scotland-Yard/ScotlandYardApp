@@ -67,8 +67,6 @@ fun GameScreen(
             gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
                 gameVm.fetchAllowedDoubleMoves(gameId, username)
-                //zuerst auf false, MrX setzt selber
-                gameVm.updateDoubleMoveMode(false)
             }
         }
     }
@@ -237,7 +235,7 @@ fun SelectableDoubleTicket(
                 color = if (gameVm.isDoubleMoveMode) Color.Blue else Color.Transparent,
                 shape = RoundedCornerShape(8.dp)
             )
-            .clickable { gameVm.isDoubleMoveMode = !gameVm.isDoubleMoveMode }
+            .clickable { gameVm.toggleDoubleMoveMode() }
     ) {
         Image(
             painter = painterResource(id = R.drawable.ticket_double),

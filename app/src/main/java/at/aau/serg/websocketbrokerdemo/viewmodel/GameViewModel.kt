@@ -47,8 +47,8 @@ class GameViewModel(
 
     var isDoubleMoveMode by mutableStateOf(false)
 
-    fun updateDoubleMoveMode(enabled: Boolean) {
-        isDoubleMoveMode = enabled
+    fun toggleDoubleMoveMode(){
+        isDoubleMoveMode = !isDoubleMoveMode
     }
 
     fun move(gameId: String, name: String, to: Int, gotTicket: String) {
