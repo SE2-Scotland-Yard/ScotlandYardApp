@@ -37,6 +37,7 @@ import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 import kotlinx.coroutines.delay
+import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +118,7 @@ fun GameScreen(
                 .padding(padding)
         ) {
 
-            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn)
+            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition)
             BottomBar(gameVm, username, gameId, isMyTurn)
 
             //TODO show last MrX Position when revealed
@@ -275,7 +276,9 @@ fun Map(
     gameId:String,
     username: String?,
     playerPositions: Map<String, Int>,
-    isMyTurn : Boolean
+    isMyTurn : Boolean,
+    userSessionVm: UserSessionViewModel,
+    mrXPosition: Int?
 ) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
@@ -310,7 +313,7 @@ fun Map(
                     modifier = Modifier.fillMaxSize()
                 )
                 Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
-                PlayerPositions(gameVm,points,density, playerPositions)
+                PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition)
             }
         }
     }
@@ -381,16 +384,14 @@ private fun Stations(
                 ) {
                     movesForStation.forEach { move ->
 
-                            // Alternative approach to get target and ticket
+
                             val (targetStation, ticketType) = when {
                                 move.keys.size >= 2 -> {
-                                    // Assuming first key is current station, second is target
                                     val target = move.keys.firstOrNull { it != id } ?: -1
                                     val ticket = move.values.firstOrNull() ?: ""
                                     target to ticket
                                 }
                                 else -> {
-                                    // Fallback if structure is different
                                     move.keys.firstOrNull()?.let { key ->
                                         key to (move[key] ?: "")
                                     } ?: (-1 to "")
@@ -415,30 +416,63 @@ private fun Stations(
         }
     }
 
-}
-@Composable
+}@Composable
 private fun PlayerPositions(
     gameVm: GameViewModel,
     points: Map<Int, Pair<Int, Int>>,
     density: Density,
-    playerPositions: Map<String, Int>
+    playerPositions: Map<String, Int>,
+    userSessionVm: UserSessionViewModel,
+    mrXPosition: Int?
 ) {
     val iconSizeDp = (30 * gameVm.scale).dp
-    val playerIcon = painterResource(id = R.drawable.player)
 
+
+    val playerIcons = listOf(
+        R.drawable.blue,
+        R.drawable.green,
+        R.drawable.purple,
+        R.drawable.red
+    )
+
+    fun getIconForPlayer(name: String): Int {
+        val hash = name.hashCode().absoluteValue
+        return playerIcons[hash % playerIcons.size]
+    }
+
+    // Normale Spieler-Icons für alle anzeigen
     playerPositions.forEach { (playerName, positionId) ->
         points[positionId]?.let { (xPx, yPx) ->
-            val xDp = with(density) { (xPx * gameVm.scale).toDp() }
-            val yDp = with(density) { (yPx * gameVm.scale).toDp() }
-
             Image(
-                painter = playerIcon,
+                painter = painterResource(id = getIconForPlayer(playerName)),
                 contentDescription = "Position von $playerName",
                 modifier = Modifier
                     .size(iconSizeDp)
-                    .offset(x = xDp - iconSizeDp / 2, y = yDp - iconSizeDp / 2),
+                    .offset(
+                        x = with(density) { (xPx * gameVm.scale).toDp() } - iconSizeDp / 2,
+                        y = with(density) { (yPx * gameVm.scale).toDp() } - iconSizeDp / 2
+                    ),
                 contentScale = ContentScale.Fit
             )
+        }
+    }
+
+    // Mr.X Icon nur anzeigen, wenn der aktuelle Spieler Mr.X ist
+    if (userSessionVm.role.value == "MRX") {
+        mrXPosition?.let { positionId ->
+            points[positionId]?.let { (xPx, yPx) ->
+                Image(
+                    painter = painterResource(id = R.drawable.mrx),
+                    contentDescription = "Position von Mr.X",
+                    modifier = Modifier
+                        .size(iconSizeDp)
+                        .offset(
+                            x = with(density) { (xPx * gameVm.scale).toDp() } - iconSizeDp / 2,
+                            y = with(density) { (yPx * gameVm.scale).toDp() } - iconSizeDp / 2
+                        ),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
     }
 }
