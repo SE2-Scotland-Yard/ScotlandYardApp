@@ -9,6 +9,7 @@ import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
+import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket

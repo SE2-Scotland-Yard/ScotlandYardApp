@@ -2,6 +2,7 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import android.graphics.Color.alpha
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 
@@ -78,7 +80,6 @@ fun GameScreen(
             gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
                 gameVm.fetchAllowedDoubleMoves(gameId, username)
-
             }
         }
     }
@@ -94,8 +95,7 @@ fun GameScreen(
             modifier = Modifier
                 .padding(padding)
         ) {
-
-            Map(gameVm, useSmallMap, allowedMoves)
+            Map(gameVm, useSmallMap, allowedMoves, allowedDoubleMoves)
             BottomBar(gameVm, username, gameId, isMyTurn)
             
             //TODO show last MrX Position when revealed
@@ -249,6 +249,7 @@ fun Map(
     gameVm: GameViewModel,
     useSmallMap: Boolean,
     allowedMoves: List<AllowedMoveResponse>,
+    allowedDoubleMoves : List<MrXDoubleMoveResponse>
 ) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
@@ -282,7 +283,11 @@ fun Map(
                     contentScale = ContentScale.FillBounds,
                     modifier = Modifier.fillMaxSize()
                 )
-                Stations(gameVm, points, density, allowedMoves)
+                if (gameVm.isDoubleMoveMode) {
+                    StationsDoubleMove(gameVm, points, density, allowedDoubleMoves)
+                }else{
+                    Stations(gameVm, points, density, allowedMoves)
+                }
             }
         }
     }
@@ -295,7 +300,6 @@ private fun Stations(
     density: Density,
     allowedMoves: List<AllowedMoveResponse>
 ) {
-    val buttonSizeDp = (1 * gameVm.scale).dp
 
     points.forEach { (id, pos) ->
         val (xPx, yPx) = pos
@@ -305,26 +309,65 @@ private fun Stations(
         var allowed = false
         allowedMoves.forEach { move -> if (id in move.keys) allowed = true }
 
-        Button(
-            onClick = { gameVm.selectedStation = id },
-            modifier = Modifier
-                .size(buttonSizeDp)
-                .offset(
-                    x = xDp - buttonSizeDp / 2,
-                    y = yDp - buttonSizeDp / 2
-                )
-                .border(
-                    width = if (allowed) 3.dp else 0.dp, // TODO indicator for which moves are for which ticket
-                    color = if (allowed) Color.Blue else Color.Transparent,
-                    shape = CircleShape,
-
-                ),
-            colors = ButtonDefaults.buttonColors(containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
-            enabled = allowed
-        ) {}
+        if (allowed)
+        StationButton(gameVm, id,xDp, yDp, Color.Blue)
     }
 }
 
 
+@Composable
+fun StationsDoubleMove(
+    gameVm: GameViewModel,
+    points: Map<Int, Pair<Int, Int>>,
+    density: Density,
+    allowedDoubleMoves: List<MrXDoubleMoveResponse>
+){
+    points.forEach { (id, pos) ->
+        val (xPx, yPx) = pos
+        val xDp = with(density) { (xPx * gameVm.scale).toDp() }
+        val yDp = with(density) { (yPx * gameVm.scale).toDp() }
 
+        var allowedFirst = false
+        var allowedSecond = false
+        allowedDoubleMoves.forEach { response ->
+            if (id == response.firstTo) allowedFirst = true
+            if (id == response.secondTo) allowedSecond = true
+        }
 
+        //First move
+        if (allowedFirst){
+            StationButton(gameVm, id,xDp, yDp, Color.Gray)
+        }
+        //Second move
+        if (allowedSecond){
+            StationButton(gameVm, id,xDp, yDp, Color.Red)
+        }
+    }
+}
+
+@Composable
+private fun StationButton(
+    gameVm: GameViewModel,
+    id: Int,
+    xDp: Dp,
+    yDp: Dp,
+    color: Color
+) {
+    val buttonSizeDp = (1 * gameVm.scale).dp
+
+    Button(
+        onClick = { gameVm.selectedStation = id },
+        modifier = Modifier
+            .size(buttonSizeDp)
+            .offset(
+                x = xDp - buttonSizeDp / 2,
+                y = yDp - buttonSizeDp / 2
+            )
+            .border(
+                width = 3.dp,
+                color = color,
+                shape = CircleShape,
+            ),
+        colors = ButtonDefaults.buttonColors(containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent),
+    ) {}
+}
