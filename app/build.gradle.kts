@@ -113,6 +113,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx.v262)
 
+    // --- Load Json ---
+    implementation("com.squareup.retrofit2:converter-gson:2.5.0")
+
     // --- Compose & UI ---
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

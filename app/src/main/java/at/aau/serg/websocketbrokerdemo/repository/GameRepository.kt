@@ -1,5 +1,6 @@
 package at.aau.serg.websocketbrokerdemo.repository
 
+import android.content.Context
 import androidx.compose.ui.graphics.vector.EmptyPath
 import at.aau.serg.websocketbrokerdemo.data.api.GameApi
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
@@ -7,6 +8,9 @@ import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import com.google.gson.JsonParser
+import com.google.gson.Gson
+
 
 class GameRepository (
     private val api: GameApi = Retrofit.Builder()
@@ -47,24 +51,18 @@ class GameRepository (
             return api.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
         }
 
-        fun getPointPositions(): Map<Int, Pair<Int, Int>> {
-            //TODO: Implement loading in positions from json file, currently hard coded some for testing
-            val map : Map<Int, Pair<Int, Int>> = mapOf(
-                0 to Pair(0,0),
-                1 to Pair(318, 78),
-                2 to Pair(782, 42),
-                3 to Pair(1082, 48),
-                4 to Pair(1268, 36),
-                5 to Pair(1996, 58),
-                172 to Pair(1910,1542),
-                173 to Pair(2170,1620),
-                190 to Pair(290,1824),
-                191 to Pair(438,1706)
+        fun getPointPositions(context : Context): Map<Int, Pair<Int, Int>> {
+            val json = context.assets.open("PointPositions.json").bufferedReader().use { it.readText() }
+            val jsonObject = JsonParser.parseString(json).asJsonObject
 
-            )
-            return map
+            return jsonObject.entrySet().associate { entry ->
+                val id = entry.key.toInt()
+                val point = entry.value.asJsonArray[0].asJsonObject
+                val x = point["x"].asInt
+                val y = point["y"].asInt
+                id to (x to y)
+            }
+
+
         }
-
-
-
     }
