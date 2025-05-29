@@ -11,6 +11,7 @@ data class LobbyState(
     val maxPlayers: Int,
     val currentPlayerCount: Int,
     val selectedRoles: Map<String, String> = emptyMap(),
-    val position: Int
+    val position: Int,
+    val avatars: Map<String, Int> = emptyMap(),
 )
 

@@ -1,6 +1,7 @@
 package at.aau.serg.websocketbrokerdemo.viewmodel
 
 import LobbyRepository
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
@@ -8,6 +9,7 @@ import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -30,6 +32,10 @@ class LobbyViewModel(
 
     private val _gameState = MutableStateFlow<GameUpdate?>(null)
     val gameState = _gameState.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
 
     var alreadyConnected = false
 
@@ -78,14 +84,16 @@ class LobbyViewModel(
         gameId: String,
         onConnected: () -> Unit = {}
     ) {
-
         if (alreadyConnected) return
 
         stompManager.connectToAllTopics(
             gameId,
             onConnected = onConnected,
-            onLobbyUpdate = { lobby -> _lobbyStatus.value = lobby }
+            onLobbyUpdate = { _lobbyStatus.value = it },
+            onErrorMessage = { msg -> _errorMessage.value = msg }
+
         )
+
 
         viewModelScope.launch {
             stompManager.lobbyUpdates.collectLatest { _lobbyStatus.value = it }
@@ -97,6 +105,7 @@ class LobbyViewModel(
 
         alreadyConnected = true
     }
+
 
 
 
@@ -149,4 +158,15 @@ class LobbyViewModel(
         stompManager.disconnect()
         super.onCleared()
     }
+
+    fun selectAvatar(gameId: String, player: String, avatarResId: Int) {
+        stompManager.sendSelectedAvatar(gameId, player, avatarResId)
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+
+
 }

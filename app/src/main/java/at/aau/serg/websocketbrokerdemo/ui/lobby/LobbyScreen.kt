@@ -2,7 +2,13 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +20,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import at.aau.serg.websocketbrokerdemo.model.Avatar
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
@@ -27,17 +34,34 @@ fun LobbyScreen(
     onLeft: () -> Unit,
     onGameStarted: (String) -> Unit,
 
-) {
+    ) {
     val lobbyState by lobbyVm.lobbyStatus.collectAsState()
     val context = LocalContext.current
     var toastShown by remember { mutableStateOf(false) }
+    var showAvatarPicker by remember { mutableStateOf(false) }
 
+    val avatarsMap = lobbyState?.avatars
+    val currentUsername = userSessionVm.username.value
+
+
+    val error by lobbyVm.errorMessage.collectAsState()
+
+    // Zeige Fehler-Toast
+    LaunchedEffect(error) {
+        error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            lobbyVm.clearError()
+        }
+    }
+
+
+    //Starte das Spiel, wenn "isStarted" true wird
     LaunchedEffect(lobbyState?.isStarted) {
         if (lobbyState?.isStarted == true) {
             onGameStarted(gameId)
         }
     }
-
+    // lobbyStatus holen + websocket verbinden
     LaunchedEffect(gameId) {
         lobbyVm.fetchLobbyStatus(gameId)
         lobbyVm.connectToLobby(
@@ -51,13 +75,20 @@ fun LobbyScreen(
         )
     }
 
+    // Synchronisiere Rolle und Avatar aus dem LobbyState ins lokale UserSessionViewModel
     LaunchedEffect(lobbyState) {
         val currentPlayer = userSessionVm.username.value.orEmpty()
-        val currentRole = lobbyState?.selectedRoles?.get(currentPlayer)
-        if (currentRole != null) {
-            userSessionVm.role.value = currentRole
+
+        // Rolle setzen
+        userSessionVm.role.value = lobbyState?.selectedRoles?.get(currentPlayer)
+
+        // Avatar zurücksetzen, wenn im Backend nicht mehr vorhanden
+        if (lobbyState?.avatars?.get(currentPlayer) == null) {
+            userSessionVm.avatarResId = null
         }
     }
+
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -72,9 +103,13 @@ fun LobbyScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Lobby $gameId",
-                    //style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Lobby $gameId",
+                        //style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 actions = {
                     TextButton(
                         onClick = {
@@ -84,12 +119,16 @@ fun LobbyScreen(
                             }
                         }
                     ) {
-                        Text("Verlassen",
-                            color = Color.Black)
+                        Text(
+                            "Verlassen",
+                            color = Color.Black
+                        )
                     }
                 }
             )
         }
+
+
     ) { padding ->
         lobbyState?.let { lobby ->
             val currentPlayer = userSessionVm.username.value.orEmpty()
@@ -110,7 +149,8 @@ fun LobbyScreen(
                         .weight(1f)
                         .fillMaxHeight()
                 ) {
-                    Text("Spieler in der Lobby:",
+                    Text(
+                        "Spieler in der Lobby:",
                         //style = MaterialTheme.typography.titleMedium
                         color = Color.White.copy(alpha = 0.85f),
                         style = MaterialTheme.typography.headlineSmall
@@ -120,7 +160,8 @@ fun LobbyScreen(
                     lobby.players.forEach { p ->
                         val ready = lobby.readyStatus[p] == true
                         val role = lobby.selectedRoles[p] ?: "unbekannt"
-                        Text("• $p - Rolle: $role ${if (ready) "(bereit)" else "(wartet)"}",
+                        Text(
+                            "• $p - Rolle: $role ${if (ready) "(bereit)" else "(wartet)"}",
                             color = Color.White.copy(alpha = 0.85f),
                             style = MaterialTheme.typography.titleMedium
                         )
@@ -137,7 +178,8 @@ fun LobbyScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Wähle deine Rolle:",
+                        Text(
+                            "Wähle deine Rolle:",
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -175,7 +217,8 @@ fun LobbyScreen(
 
                     currentRole?.let {
                         Spacer(Modifier.height(8.dp))
-                        Text("Deine aktuelle Rolle: $it",
+                        Text(
+                            "Deine aktuelle Rolle: $it",
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -190,11 +233,17 @@ fun LobbyScreen(
                     }
 
                     Spacer(Modifier.height(24.dp))
+                    val hasRole = currentRole != null
+                    val hasAvatar =
+                        userSessionVm.role.value == "MRX" || userSessionVm.avatarResId != null
+                    val isReadyEnabled = !lobby.isStarted && hasRole && hasAvatar
+
                     if (!lobby.isStarted) {
                         Button(
                             onClick = {
                                 lobbyVm.sendReady(gameId, currentPlayer)
                             },
+                            enabled = isReadyEnabled,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colorResource(id = R.color.buttonStartScreen),
                                 contentColor = Color.Black
@@ -202,12 +251,33 @@ fun LobbyScreen(
                         ) {
                             Text("Bereit")
                         }
-                    } else {
-                        Text(
-                            "Das Spiel hat begonnen!",
-                            color = MaterialTheme.colorScheme.primary
-                        )
+
+                        if (!hasRole) {
+                            Text(
+                                text = "Bitte zuerst eine Rolle wählen",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        } else if (!hasAvatar && userSessionVm.role.value == "DETECTIVE") {
+                            Text(
+                                text = "Bitte einen Avatar wählen",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
+
+                    Button(
+                        onClick = { showAvatarPicker = !showAvatarPicker },
+                        enabled = userSessionVm.role.value == "DETECTIVE",
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colorResource(id = R.color.buttonStartScreen),
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text("Avatar wählen")
+                    }
+
                 }
             }
         } ?: Box(
@@ -216,5 +286,85 @@ fun LobbyScreen(
         ) {
             CircularProgressIndicator()
         }
+
+        val avatars = Avatar.values().toList()
+
+
+        var selectedAvatar by remember { mutableStateOf(userSessionVm.avatarResId) }
+
+
+        if (showAvatarPicker && userSessionVm.role.value == "DETECTIVE") {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable { showAvatarPicker = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(Color.DarkGray, shape = MaterialTheme.shapes.medium)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Wähle deinen Avatar:",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        avatars.forEach { avatar ->
+                            val isSelected = avatar.drawableRes == selectedAvatar
+                            val isTaken = avatarsMap?.values?.contains(avatar.id) == true &&
+                                    avatarsMap[currentUsername] != avatar.id
+
+                            Box(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .size(64.dp)
+                                    .border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color = when {
+                                            isTaken -> Color.Red
+                                            isSelected -> Color.Yellow
+                                            else -> Color.White
+                                        },
+                                        shape = CircleShape
+                                    )
+                                    .clickable(enabled = !isTaken) {
+                                        selectedAvatar = avatar.drawableRes
+                                        userSessionVm.avatarResId = avatar.drawableRes
+                                        lobbyVm.selectAvatar(gameId, currentUsername!!, avatar.id)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(id = avatar.drawableRes),
+                                    contentDescription = "Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { showAvatarPicker = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                    ) {
+                        Text("Fertig")
+                    }
+                }
+            }
+        }
+
+
     }
+
 }
