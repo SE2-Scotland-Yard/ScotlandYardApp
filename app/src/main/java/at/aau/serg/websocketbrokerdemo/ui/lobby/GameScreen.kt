@@ -1,6 +1,7 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
+import android.app.Activity
 import android.graphics.Color.alpha
 import android.util.Log
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
@@ -71,7 +73,8 @@ fun GameScreen(
     var expandedSecondMove by remember { mutableStateOf(false) }
     val playerPositions: Map<String, Int> = gameUpdate?.playerPositions ?: emptyMap()
     val winner = gameUpdate?.winner
-
+    val context = LocalContext.current
+    var navigateToLobby by remember { mutableStateOf(false) }
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
@@ -101,9 +104,22 @@ fun GameScreen(
         }
     }
 
+    LaunchedEffect(navigateToLobby) {
+        if (navigateToLobby) {
+            username?.let { name ->
+                context.startActivity(LobbyActivity.createIntent(context, name))
+                if (context is Activity) {
+                    context.finish()
+                }
+            }
+        }
+    }
+
     LaunchedEffect(winner) {
         if (winner != "NONE") {
             showWinnerOverlay = true
+            delay(60000L)
+            navigateToLobby = true
         }
     }
 
@@ -136,7 +152,7 @@ fun GameScreen(
                 WinnerOverlay(
                     winner = winner,
                     currentPlayerRole = userSessionVm.role.value,
-                    onDismiss = { showWinnerOverlay = false }
+                    onDismiss = { navigateToLobby = true  }
                 )
             }
 
