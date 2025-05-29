@@ -5,6 +5,8 @@ import android.app.Activity
 import android.graphics.Color.alpha
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.shape.CircleShape
@@ -82,10 +84,16 @@ fun GameScreen(
     var showMrXHistory by remember { mutableStateOf(false) }
     var mrXHistory by remember { mutableStateOf<List<String>>(emptyList()) }
     var visibleTicket by remember { mutableStateOf<String?>(null) }
+    var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
 
 
     val isMyTurn = username == gameUpdate?.currentPlayer
+
+    LaunchedEffect(playerPositions) {
+        previousPlayerPositions = playerPositions
+    }
+
 
     // Moves nach dem Join laden
     LaunchedEffect(gameId, username) {
@@ -639,6 +647,12 @@ private fun PlayerPositions(
     mrXPosition: Int?
 ) {
     val iconSizeDp = (40 * gameVm.scale).dp
+    var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var previousMrXPosition by remember { mutableStateOf(mrXPosition) }
+
+    LaunchedEffect(playerPositions) {
+        previousPlayerPositions = playerPositions
+    }
 
 
     val playerIcons = listOf(
@@ -658,14 +672,26 @@ private fun PlayerPositions(
     // Normale Spieler-Icons für alle anzeigen
     playerPositions.forEach { (playerName, positionId) ->
         points[positionId]?.let { (xPx, yPx) ->
+
+            // Animierte Positionen
+            val animatedX by animateFloatAsState(
+                targetValue = xPx * gameVm.scale,
+                animationSpec = tween(durationMillis = 2000)
+            )
+            val animatedY by animateFloatAsState(
+                targetValue = yPx * gameVm.scale,
+                animationSpec = tween(durationMillis = 2000)
+            )
+
+
             Image(
                 painter = painterResource(id = getIconForPlayer(playerName)),
                 contentDescription = "Position von $playerName",
                 modifier = Modifier
                     .size(iconSizeDp)
                     .offset(
-                        x = with(density) { (xPx * gameVm.scale).toDp() } - iconSizeDp / 2,
-                        y = with(density) { (yPx * gameVm.scale).toDp() } - iconSizeDp / 2
+                        x = with(density) { animatedX.toDp() } - iconSizeDp / 2,
+                        y = with(density) { animatedY.toDp() } - iconSizeDp / 2
                     ),
                 contentScale = ContentScale.Fit
             )
@@ -676,14 +702,25 @@ private fun PlayerPositions(
     if (userSessionVm.role.value == "MRX") {
         mrXPosition?.let { positionId ->
             points[positionId]?.let { (xPx, yPx) ->
+
+
+                val animatedX by animateFloatAsState(
+                    targetValue = xPx * gameVm.scale,
+                    animationSpec = tween(durationMillis = 2000)
+                )
+                val animatedY by animateFloatAsState(
+                    targetValue = yPx * gameVm.scale,
+                    animationSpec = tween(durationMillis = 2000)
+                )
+
                 Image(
                     painter = painterResource(id = R.drawable.mrx),
                     contentDescription = "Position von Mr.X",
                     modifier = Modifier
                         .size(iconSizeDp)
                         .offset(
-                            x = with(density) { (xPx * gameVm.scale).toDp() } - iconSizeDp / 2,
-                            y = with(density) { (yPx * gameVm.scale).toDp() } - iconSizeDp / 2
+                            x = with(density) { animatedX.toDp() } - iconSizeDp / 2,
+                            y = with(density) { animatedY.toDp() } - iconSizeDp / 2
                         ),
                     contentScale = ContentScale.Fit
                 )
