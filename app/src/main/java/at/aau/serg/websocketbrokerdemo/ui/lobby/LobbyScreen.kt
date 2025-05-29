@@ -103,8 +103,8 @@ fun LobbyScreen(
 
         //Globale Avatare aller Spieler merken
         lobbyState?.avatars?.let { avatarMap ->
-            userSessionVm.avatars.clear()
-            userSessionVm.avatars.putAll(avatarMap)
+            userSessionVm.avatarIds.clear()
+            userSessionVm.avatarIds.putAll(avatarMap)
         }
 
         //Globale Rollen aller Spieler merken
