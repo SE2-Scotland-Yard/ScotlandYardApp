@@ -649,6 +649,8 @@ private fun PlayerPositions(
     val iconSizeDp = (40 * gameVm.scale).dp
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var previousMrXPosition by remember { mutableStateOf(mrXPosition) }
+    var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
+    var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
 
     LaunchedEffect(playerPositions) {
         previousPlayerPositions = playerPositions
@@ -671,16 +673,27 @@ private fun PlayerPositions(
     // Normale Spieler-Icons für alle anzeigen
     playerPositions.forEach { (playerName, positionId) ->
         points[positionId]?.let { (xPx, yPx) ->
+            val currentPos = xPx to yPx
 
-            // Animierte Positionen
+            // Letzte bekannte Position dieses Spielers
+            val lastPos = lastPlayerPositions[playerName]
+
+            // Animierte Position nur wenn sich die Position geändert hat (ohne Zoom)
             val animatedX by animateFloatAsState(
-                targetValue = xPx * gameVm.scale,
-                animationSpec = tween(durationMillis = 2000)
+                targetValue = xPx.toFloat(),
+                animationSpec = tween(durationMillis = 1000),
+                label = "xAnimation_$playerName"
             )
+
             val animatedY by animateFloatAsState(
-                targetValue = yPx * gameVm.scale,
-                animationSpec = tween(durationMillis = 2000)
+                targetValue = yPx.toFloat(),
+                animationSpec = tween(durationMillis = 1000),
+                label = "yAnimation_$playerName"
             )
+
+            // Zoom erst hier anwenden
+            val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
+            val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
 
             Image(
@@ -689,11 +702,14 @@ private fun PlayerPositions(
                 modifier = Modifier
                     .size(iconSizeDp)
                     .offset(
-                        x = with(density) { animatedX.toDp() } - iconSizeDp / 2,
-                        y = with(density) { animatedY.toDp() } - iconSizeDp / 2
+                        x = displayX - iconSizeDp / 2,
+                        y = displayY - iconSizeDp / 2
                     ),
                 contentScale = ContentScale.Fit
             )
+            LaunchedEffect(positionId) {
+                lastPlayerPositions = lastPlayerPositions + (playerName to (xPx.toFloat() to yPx.toFloat()))
+            }
         }
     }
 
@@ -702,15 +718,24 @@ private fun PlayerPositions(
         mrXPosition?.let { positionId ->
             points[positionId]?.let { (xPx, yPx) ->
 
+                val currentPos = xPx to yPx
 
+                // Animierte Position nur wenn sich die Position geändert hat
                 val animatedX by animateFloatAsState(
-                    targetValue = xPx * gameVm.scale,
-                    animationSpec = tween(durationMillis = 2000)
+                    targetValue = xPx.toFloat(),
+                    animationSpec = tween(durationMillis = 1000),
+                    label = "xAnimation_MrX"
                 )
+
                 val animatedY by animateFloatAsState(
-                    targetValue = yPx * gameVm.scale,
-                    animationSpec = tween(durationMillis = 2000)
+                    targetValue = yPx.toFloat(),
+                    animationSpec = tween(durationMillis = 1000),
+                    label = "yAnimation_MrX"
                 )
+
+                // Zoom erst hier anwenden
+                val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
+                val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
                 Image(
                     painter = painterResource(id = R.drawable.mrx),
@@ -718,11 +743,14 @@ private fun PlayerPositions(
                     modifier = Modifier
                         .size(iconSizeDp)
                         .offset(
-                            x = with(density) { animatedX.toDp() } - iconSizeDp / 2,
-                            y = with(density) { animatedY.toDp() } - iconSizeDp / 2
+                            x = displayX - iconSizeDp / 2,
+                            y = displayY - iconSizeDp / 2
                         ),
                     contentScale = ContentScale.Fit
                 )
+                LaunchedEffect(positionId) {
+                    lastMrXPosition = xPx.toFloat() to yPx.toFloat()
+                }
             }
         }
     }
