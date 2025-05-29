@@ -46,6 +46,7 @@ class GameViewModel(
     var selectedStation : Int by mutableIntStateOf(0)
 
     var isDoubleMoveMode by mutableStateOf(false)
+    var isBlackMoveMode by mutableStateOf(false)
 
     fun updateDoubleMoveMode(enabled: Boolean) {
         isDoubleMoveMode = enabled
@@ -65,8 +66,8 @@ class GameViewModel(
     fun blackMove(gameId: String, name: String, to: Int, gotTicket: String) {
         viewModelScope.launch {
             try {
-                var blackTicket = "BLACK"
-                message = repository.blackMove(gameId, name, to, blackTicket)
+
+                message = repository.blackMove(gameId, name, to, gotTicket)
             }catch (e:Exception){
                 errorMessage = e.message
             }
