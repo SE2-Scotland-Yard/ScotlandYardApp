@@ -54,10 +54,22 @@ class GameViewModel(
     fun move(gameId: String, name: String, to: Int, gotTicket: String) {
        viewModelScope.launch {
            try {
+
                message = repository.move(gameId, name, to, gotTicket)
            }catch (e:Exception){
                errorMessage = e.message
            }
+        }
+    }
+
+    fun blackMove(gameId: String, name: String, to: Int, gotTicket: String) {
+        viewModelScope.launch {
+            try {
+                var blackTicket = "BLACK"
+                message = repository.blackMove(gameId, name, to, blackTicket)
+            }catch (e:Exception){
+                errorMessage = e.message
+            }
         }
     }
 

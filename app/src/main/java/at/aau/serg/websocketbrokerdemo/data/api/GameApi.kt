@@ -54,5 +54,14 @@ interface GameApi {
 
 
 
+    @POST("api/game/blackMove")
+    suspend fun blackMove(
+        @Query("gameId") gameId: String,
+        @Query("name")     name: String,
+        @Query("to") to: Int,
+        @Query("gotTicket")     gotTicket: String
+    ): MoveResponse
+
+
 
 }
