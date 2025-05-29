@@ -655,7 +655,7 @@ private fun PlayerPositions(
     }
 
 
-    val playerIcons = listOf(
+    val defaultPlayerIcons = listOf(
         R.drawable.bear,
         R.drawable.panda,
         R.drawable.fox,
@@ -665,8 +665,7 @@ private fun PlayerPositions(
     )
 
     fun getIconForPlayer(name: String): Int {
-        val hash = name.hashCode().absoluteValue
-        return playerIcons[hash % playerIcons.size]
+        return userSessionVm.getAvatarDrawableRes(name)
     }
 
     // Normale Spieler-Icons für alle anzeigen
