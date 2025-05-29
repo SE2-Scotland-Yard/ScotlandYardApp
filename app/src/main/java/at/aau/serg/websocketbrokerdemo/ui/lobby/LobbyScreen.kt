@@ -1,5 +1,6 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -85,6 +86,31 @@ fun LobbyScreen(
         // Avatar zurücksetzen, wenn im Backend nicht mehr vorhanden
         if (lobbyState?.avatars?.get(currentPlayer) == null) {
             userSessionVm.avatarResId = null
+        }
+    }
+
+    // Synchronisiere Rolle und Avatar aus dem LobbyState ins lokale UserSessionViewModel
+    LaunchedEffect(lobbyState) {
+        val currentPlayer = userSessionVm.username.value.orEmpty()
+
+        // Eigene Rolle setzen
+        userSessionVm.role.value = lobbyState?.selectedRoles?.get(currentPlayer)
+
+        // Eigenen Avatar zurücksetzen, wenn im Backend nicht mehr vorhanden
+        if (lobbyState?.avatars?.get(currentPlayer) == null) {
+            userSessionVm.avatarResId = null
+        }
+
+        //Globale Avatare aller Spieler merken
+        lobbyState?.avatars?.let { avatarMap ->
+            userSessionVm.avatars.clear()
+            userSessionVm.avatars.putAll(avatarMap)
+        }
+
+        //Globale Rollen aller Spieler merken
+        lobbyState?.selectedRoles?.let { roleMap ->
+            userSessionVm.roles.clear()
+            userSessionVm.roles.putAll(roleMap)
         }
     }
 
@@ -277,6 +303,9 @@ fun LobbyScreen(
                     ) {
                         Text("Avatar wählen")
                     }
+
+
+
 
                 }
             }
