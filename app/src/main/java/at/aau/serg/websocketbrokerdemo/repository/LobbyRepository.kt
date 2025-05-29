@@ -1,6 +1,7 @@
 import at.aau.serg.websocketbrokerdemo.data.api.LobbyApi
 import at.aau.serg.websocketbrokerdemo.data.model.JoinResponse
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
+import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -32,4 +33,5 @@ class LobbyRepository(
     suspend fun getLobbyStatus(gameId: String): LobbyState {
         return api.getLobbyStatus(gameId)
     }
+
 }
