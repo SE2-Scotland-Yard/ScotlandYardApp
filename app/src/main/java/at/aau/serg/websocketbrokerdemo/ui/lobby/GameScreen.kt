@@ -3,6 +3,8 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 import GameViewModel
 import android.graphics.Color.alpha
 import android.util.Log
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -421,7 +423,8 @@ private fun Stations(
         }
     }
 
-}@Composable
+}
+@Composable
 private fun PlayerPositions(
     gameVm: GameViewModel,
     points: Map<Int, Pair<Int, Int>>,
@@ -430,14 +433,16 @@ private fun PlayerPositions(
     userSessionVm: UserSessionViewModel,
     mrXPosition: Int?
 ) {
-    val iconSizeDp = (30 * gameVm.scale).dp
+    val iconSizeDp = (40 * gameVm.scale).dp
 
 
     val playerIcons = listOf(
-        R.drawable.blue,
-        R.drawable.green,
-        R.drawable.purple,
-        R.drawable.red
+        R.drawable.bear,
+        R.drawable.panda,
+        R.drawable.fox,
+        R.drawable.pig,
+        R.drawable.crocodile,
+        R.drawable.duck
     )
 
     fun getIconForPlayer(name: String): Int {
