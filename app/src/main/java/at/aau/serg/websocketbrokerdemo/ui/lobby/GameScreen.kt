@@ -368,15 +368,16 @@ private fun BoxScope.BottomBar(
     Row(modifier = Modifier.align(Alignment.BottomStart)) {
 
         Spacer(spacermod)
-        Spacer(spacermod)
+        // Black Move Mode Button (nur für Mr. X)
+        if (userSessionVm.role.value == "MRX") {
+            BlackMoveModeButton(gameVm = gameVm)
+            Spacer(spacermod)
+        }
+
+        // Double Move Button (nur für Mr. X)
         if (userSessionVm.role.value == "MRX") {
             SelectableDoubleTicket(gameVm = gameVm)
             Spacer(spacermod)
-            SelectableTicket(
-                gameVm = gameVm,
-                imageRes = R.drawable.ticket_black,
-                ticket = Ticket.BLACK
-            )
         }
 
     }
@@ -408,6 +409,26 @@ private fun BoxScope.BottomBar(
             Text(if (showMrXHistory) "Schließen" else "MrX Verlauf")
         }
 
+    }
+}
+
+@Composable
+fun BlackMoveModeButton(gameVm: GameViewModel) {
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .border(
+                width = if (gameVm.isBlackMoveMode) 3.dp else 0.dp,
+                color = if (gameVm.isBlackMoveMode) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable { gameVm.isBlackMoveMode = !gameVm.isBlackMoveMode }
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ticket_black),
+            contentDescription = "Black Move Mode",
+            modifier = Modifier.size(48.dp)
+        )
     }
 }
 
@@ -590,7 +611,11 @@ private fun Stations(
                                     text = { Text("$ticketType → Station $targetStation") },
                                     onClick = {
                                         username?.let { name ->
-                                            gameVm.move(gameId, name, targetStation, ticketType)
+                                            if (gameVm.isBlackMoveMode) {
+                                                gameVm.blackMove(gameId, name, targetStation,ticketType)
+                                            } else {
+                                                gameVm.move(gameId, name, targetStation, ticketType)
+                                            }
                                             expandedStates[id] = false
                                         }
                                     }
@@ -717,7 +742,7 @@ fun WinnerOverlay(
 
             Icon(
                 painter = painterResource(
-                    id = if (isMrXWinner) R.drawable.mrx else R.drawable.red
+                    id = if (isMrXWinner) R.drawable.mrx else R.drawable.fox
                 ),
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
