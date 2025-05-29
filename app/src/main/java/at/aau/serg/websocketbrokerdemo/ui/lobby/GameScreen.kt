@@ -3,6 +3,8 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 import GameViewModel
 import android.graphics.Color.alpha
 import android.util.Log
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -31,6 +33,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -58,6 +61,7 @@ fun GameScreen(
     val error by remember { derivedStateOf { gameVm.errorMessage } }
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
+    var showWinnerOverlay by remember { mutableStateOf(false) }
 
     //TODO import Double move from old Gamescreen
     //States für DoubleMove
@@ -66,6 +70,7 @@ fun GameScreen(
     var expandedFirstMove by remember { mutableStateOf(false) }
     var expandedSecondMove by remember { mutableStateOf(false) }
     val playerPositions: Map<String, Int> = gameUpdate?.playerPositions ?: emptyMap()
+    val winner = gameUpdate?.winner
 
 
     val isMyTurn = username == gameUpdate?.currentPlayer
@@ -96,6 +101,12 @@ fun GameScreen(
         }
     }
 
+    LaunchedEffect(winner) {
+        if (winner != "NONE") {
+            showWinnerOverlay = true
+        }
+    }
+
     LaunchedEffect(gameUpdate) {
         if (username != null) {
 
@@ -119,7 +130,15 @@ fun GameScreen(
         ) {
 
             Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition)
-            BottomBar(gameVm, username, gameId, isMyTurn)
+            BottomBar(gameVm, username, gameId, isMyTurn,userSessionVm)
+
+            if (showWinnerOverlay) {
+                WinnerOverlay(
+                    winner = winner,
+                    currentPlayerRole = userSessionVm.role.value,
+                    onDismiss = { showWinnerOverlay = false }
+                )
+            }
 
             //TODO show last MrX Position when revealed
             Box(modifier = Modifier
@@ -134,6 +153,10 @@ fun GameScreen(
                     // TODO replace Text with showing Players in Board
                     Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge, color = Color.White)
                     Spacer(Modifier.height(8.dp))
+
+                    gameUpdate?.winner?.let { winner ->
+                        Text("Winner: $winner")
+                    }
 
                     if (userSessionVm.role.value == "MRX") {
                         mrXPosition?.let {
@@ -165,46 +188,28 @@ private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
     username: String?,
     gameId: String,
-    isMyTurn : Boolean
+    isMyTurn : Boolean,
+    userSessionVm: UserSessionViewModel
 
 ) {
-    Row(modifier = Modifier.align(Alignment.BottomCenter)) {
-        //Confirm Button
-        Button(
-            onClick = {
-                username?.let { name ->
-                    gameVm.move(
-                        gameId,
-                        name,
-                        gameVm.selectedStation,
-                        gameVm.selectedTicket.toString()
-                    )
-                    Thread.sleep(2000L)
-                    gameVm.fetchMrXPosition(gameId, username)
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue)),
-            enabled = isMyTurn
-        ) {
-            Text("Confirm")
+    val spacermod = Modifier.width(12.dp)
+    Row(modifier = Modifier.align(Alignment.BottomStart)) {
+
+        Spacer(spacermod)
+        Spacer(spacermod)
+        if (userSessionVm.role.value == "MRX") {
+            SelectableDoubleTicket(gameVm = gameVm)
+            Spacer(spacermod)
+            SelectableTicket(
+                gameVm = gameVm,
+                imageRes = R.drawable.ticket_black,
+                ticket = Ticket.BLACK
+            )
         }
 
-        // Tickets
-        val spacermod = Modifier.width(12.dp)
-        SelectableDoubleTicket(gameVm = gameVm)
-        Spacer(spacermod)
-        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_black, ticket = Ticket.BLACK)
-        Spacer(spacermod)
-        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_taxi, ticket = Ticket.TAXI)
-        Spacer(spacermod)
-        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_bus, ticket = Ticket.BUS)
-        Spacer(spacermod)
-        SelectableTicket(
-            gameVm = gameVm,
-            imageRes = R.drawable.ticket_under,
-            ticket = Ticket.UNDERGROUND
-        )
-        Spacer(spacermod)
+    }
+
+    Row(modifier = Modifier.align(Alignment.BottomEnd)) {
 
         //Zoom
         Button(
@@ -221,6 +226,8 @@ private fun BoxScope.BottomBar(
         ) {
             Text("-")
         }
+        Spacer(spacermod)
+        Spacer(spacermod)
     }
 }
 
@@ -416,7 +423,8 @@ private fun Stations(
         }
     }
 
-}@Composable
+}
+@Composable
 private fun PlayerPositions(
     gameVm: GameViewModel,
     points: Map<Int, Pair<Int, Int>>,
@@ -425,14 +433,16 @@ private fun PlayerPositions(
     userSessionVm: UserSessionViewModel,
     mrXPosition: Int?
 ) {
-    val iconSizeDp = (30 * gameVm.scale).dp
+    val iconSizeDp = (40 * gameVm.scale).dp
 
 
     val playerIcons = listOf(
-        R.drawable.blue,
-        R.drawable.green,
-        R.drawable.purple,
-        R.drawable.red
+        R.drawable.bear,
+        R.drawable.panda,
+        R.drawable.fox,
+        R.drawable.pig,
+        R.drawable.crocodile,
+        R.drawable.duck
     )
 
     fun getIconForPlayer(name: String): Int {
@@ -472,6 +482,97 @@ private fun PlayerPositions(
                         ),
                     contentScale = ContentScale.Fit
                 )
+            }
+        }
+    }
+}
+@Composable
+fun WinnerOverlay(
+    winner: String?,
+    currentPlayerRole: String?,
+    onDismiss: () -> Unit
+) {
+    val isMrXWinner = winner == "MR_X"
+    val isCurrentPlayerMrX = currentPlayerRole == "MRX"
+
+
+    val backgroundColor = when {
+        isMrXWinner && isCurrentPlayerMrX -> Color(0xFF4CAF50)
+        !isMrXWinner && !isCurrentPlayerMrX -> Color(0xFF4CAF50)
+        else -> Color(0xFFF44336)
+    }
+
+    val title = when {
+        isMrXWinner && isCurrentPlayerMrX -> "Mr. X hat gewonnen!"
+        isMrXWinner && !isCurrentPlayerMrX -> "Mr. X hat gewonnen!"
+        !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben gewonnen!"
+        else -> "Die Detectives haben gewonnen!"
+    }
+
+
+    val message = when {
+        isMrXWinner && isCurrentPlayerMrX -> "Glückwunsch! Du hast als Mr. X gewonnen!"
+        isMrXWinner && !isCurrentPlayerMrX -> "Mr. X ist entkommen! Versucht es beim nächsten Mal besser!"
+        !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben dich gefangen!"
+        else -> "Glückwunsch! Ihr habt Mr. X gefangen!"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(24.dp)
+                .background(
+                    color = backgroundColor,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Icon(
+                painter = painterResource(
+                    id = if (isMrXWinner) R.drawable.mrx else R.drawable.red
+                ),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineLarge,
+                color = Color.White,
+                fontSize = 32.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = backgroundColor
+                ),
+                modifier = Modifier.width(150.dp)
+            ) {
+                Text("Zur Lobby")
             }
         }
     }
