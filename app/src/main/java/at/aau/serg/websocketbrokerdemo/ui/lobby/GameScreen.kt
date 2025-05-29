@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -58,6 +59,7 @@ fun GameScreen(
     val error by remember { derivedStateOf { gameVm.errorMessage } }
     val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
+    var showWinnerOverlay by remember { mutableStateOf(false) }
 
     //TODO import Double move from old Gamescreen
     //States für DoubleMove
@@ -66,6 +68,7 @@ fun GameScreen(
     var expandedFirstMove by remember { mutableStateOf(false) }
     var expandedSecondMove by remember { mutableStateOf(false) }
     val playerPositions: Map<String, Int> = gameUpdate?.playerPositions ?: emptyMap()
+    val winner = gameUpdate?.winner
 
 
     val isMyTurn = username == gameUpdate?.currentPlayer
@@ -96,6 +99,12 @@ fun GameScreen(
         }
     }
 
+    LaunchedEffect(winner) {
+        if (winner != "NONE") {
+            showWinnerOverlay = true
+        }
+    }
+
     LaunchedEffect(gameUpdate) {
         if (username != null) {
 
@@ -121,6 +130,14 @@ fun GameScreen(
             Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition)
             BottomBar(gameVm, username, gameId, isMyTurn,userSessionVm)
 
+            if (showWinnerOverlay) {
+                WinnerOverlay(
+                    winner = winner,
+                    currentPlayerRole = userSessionVm.role.value,
+                    onDismiss = { showWinnerOverlay = false }
+                )
+            }
+
             //TODO show last MrX Position when revealed
             Box(modifier = Modifier
                 .padding(2.dp)
@@ -134,6 +151,10 @@ fun GameScreen(
                     // TODO replace Text with showing Players in Board
                     Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge, color = Color.White)
                     Spacer(Modifier.height(8.dp))
+
+                    gameUpdate?.winner?.let { winner ->
+                        Text("Winner: $winner")
+                    }
 
                     if (userSessionVm.role.value == "MRX") {
                         mrXPosition?.let {
@@ -456,6 +477,97 @@ private fun PlayerPositions(
                         ),
                     contentScale = ContentScale.Fit
                 )
+            }
+        }
+    }
+}
+@Composable
+fun WinnerOverlay(
+    winner: String?,
+    currentPlayerRole: String?,
+    onDismiss: () -> Unit
+) {
+    val isMrXWinner = winner == "MR_X"
+    val isCurrentPlayerMrX = currentPlayerRole == "MRX"
+
+
+    val backgroundColor = when {
+        isMrXWinner && isCurrentPlayerMrX -> Color(0xFF4CAF50)
+        !isMrXWinner && !isCurrentPlayerMrX -> Color(0xFF4CAF50)
+        else -> Color(0xFFF44336)
+    }
+
+    val title = when {
+        isMrXWinner && isCurrentPlayerMrX -> "Mr. X hat gewonnen!"
+        isMrXWinner && !isCurrentPlayerMrX -> "Mr. X hat gewonnen!"
+        !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben gewonnen!"
+        else -> "Die Detectives haben gewonnen!"
+    }
+
+
+    val message = when {
+        isMrXWinner && isCurrentPlayerMrX -> "Glückwunsch! Du hast als Mr. X gewonnen!"
+        isMrXWinner && !isCurrentPlayerMrX -> "Mr. X ist entkommen! Versucht es beim nächsten Mal besser!"
+        !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben dich gefangen!"
+        else -> "Glückwunsch! Ihr habt Mr. X gefangen!"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(24.dp)
+                .background(
+                    color = backgroundColor,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Icon(
+                painter = painterResource(
+                    id = if (isMrXWinner) R.drawable.mrx else R.drawable.red
+                ),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineLarge,
+                color = Color.White,
+                fontSize = 32.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = backgroundColor
+                ),
+                modifier = Modifier.width(150.dp)
+            ) {
+                Text("Zur Lobby")
             }
         }
     }
