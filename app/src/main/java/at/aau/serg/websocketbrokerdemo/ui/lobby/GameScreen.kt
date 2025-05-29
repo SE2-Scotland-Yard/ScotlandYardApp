@@ -4,6 +4,9 @@ import GameViewModel
 import android.app.Activity
 import android.graphics.Color.alpha
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
@@ -76,6 +79,12 @@ fun GameScreen(
     val context = LocalContext.current
     var navigateToLobby by remember { mutableStateOf(false) }
 
+    var showMrXHistory by remember { mutableStateOf(false) }
+    var mrXHistory by remember { mutableStateOf<List<String>>(emptyList()) }
+    var visibleTicket by remember { mutableStateOf<String?>(null) }
+
+
+
     val isMyTurn = username == gameUpdate?.currentPlayer
 
     // Moves nach dem Join laden
@@ -132,6 +141,18 @@ fun GameScreen(
             }
         }
     }
+    //Verwendetes Ticket für 2 Sek einblenden
+    LaunchedEffect(gameUpdate) {
+        val ticket = gameUpdate?.lastTicketUsed
+        if (!ticket.isNullOrBlank()) {
+            visibleTicket = ticket
+            delay(2000L)
+            visibleTicket = ""
+        }
+    }
+
+
+
 
     Scaffold { padding ->
         Image(
@@ -146,7 +167,140 @@ fun GameScreen(
         ) {
 
             Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition)
-            BottomBar(gameVm, username, gameId, isMyTurn,userSessionVm)
+            BottomBar(
+                gameVm = gameVm,
+                username = username,
+                gameId = gameId,
+                isMyTurn = isMyTurn,
+                userSessionVm = userSessionVm,
+                showMrXHistory = showMrXHistory,
+                onToggleHistory = {
+                    if (!showMrXHistory) {
+                        gameVm.fetchMrXHistory(gameId) { history ->
+                            mrXHistory = history
+                        }
+                    }
+                    showMrXHistory = !showMrXHistory
+                }
+            )
+
+
+            //verwendetes Ticket anzeigen
+            AnimatedVisibility(
+                visible = !visibleTicket.isNullOrBlank(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        visibleTicket?.let {
+                            val ticketImage = when (it.uppercase()) {
+                                "TAXI" -> R.drawable.ticket_taxi
+                                "BUS" -> R.drawable.ticket_bus
+                                "UNDERGROUND" -> R.drawable.ticket_under
+                                "BLACK" -> R.drawable.ticket_black
+                                "DOUBLE" -> R.drawable.ticket_double
+                                else -> null
+                            }
+                            ticketImage?.let { res ->
+                                Image(
+                                    painter = painterResource(id = res),
+                                    contentDescription = visibleTicket,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                        }
+                        Text(
+                            text = "Ticket verwendet: ${visibleTicket?.lowercase()?.replaceFirstChar { it.uppercase() }}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+
+            //MrX history anzeigen
+            AnimatedVisibility(visible = showMrXHistory) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { showMrXHistory = false }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .widthIn(min = 240.dp, max = 320.dp)
+                            .fillMaxHeight()
+                            .background(Color.Transparent)
+                            .clickable(enabled = false) {},
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxSize(),
+                            colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.85f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                Text(
+                                    text = "MrX Verlauf",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                                Spacer(Modifier.height(12.dp))
+
+                                mrXHistory.forEach { entry ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .padding(vertical = 4.dp)
+                                            .background(
+                                                color = Color.White.copy(alpha = 0.05f),
+                                                shape = RoundedCornerShape(6.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    ) {
+                                        val round = entry.substringBefore(":")
+                                        val details = entry.substringAfter(":").trim()
+                                        val position = details.substringBefore(" ")
+                                        val ticket = details.substringAfter("(").substringBefore(")")
+
+                                        if (position != "?") {
+                                            // Sichtbare Runde → zeige Position
+                                            Text(
+                                                text = "$round: $position",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        } else {
+                                            // Verdeckte Runde → ohne Position
+                                            Text(
+                                                text = "$round:",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        TicketImage(ticket)
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
 
             if (showWinnerOverlay) {
                 WinnerOverlay(
@@ -205,7 +359,9 @@ private fun BoxScope.BottomBar(
     username: String?,
     gameId: String,
     isMyTurn : Boolean,
-    userSessionVm: UserSessionViewModel
+    userSessionVm: UserSessionViewModel,
+    showMrXHistory: Boolean,
+    onToggleHistory: () -> Unit
 
 ) {
     val spacermod = Modifier.width(12.dp)
@@ -244,6 +400,14 @@ private fun BoxScope.BottomBar(
         }
         Spacer(spacermod)
         Spacer(spacermod)
+
+        Button(
+            onClick = onToggleHistory,
+            colors = ButtonDefaults.buttonColors(containerColor = if (showMrXHistory) Color.Gray else colorResource(id = R.color.buttonBlue))
+        ) {
+            Text(if (showMrXHistory) "Schließen" else "MrX Verlauf")
+        }
+
     }
 }
 
@@ -592,7 +756,29 @@ fun WinnerOverlay(
             }
         }
     }
+
 }
+
+@Composable
+fun TicketImage(ticket: String) {
+    val ticketRes = when (ticket.uppercase()) {
+        "TAXI" -> R.drawable.ticket_taxi
+        "BUS" -> R.drawable.ticket_bus
+        "UNDERGROUND" -> R.drawable.ticket_under
+        "BLACK" -> R.drawable.ticket_black
+        "DOUBLE" -> R.drawable.ticket_double
+        else -> null
+    }
+
+    ticketRes?.let {
+        Image(
+            painter = painterResource(id = it),
+            contentDescription = ticket,
+            modifier = Modifier.size(32.dp)
+        )
+    }
+}
+
 
 
 
