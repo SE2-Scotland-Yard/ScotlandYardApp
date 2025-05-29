@@ -13,6 +13,7 @@ import org.hildan.krossbow.stomp.StompSession
 import org.hildan.krossbow.stomp.sendText
 import org.hildan.krossbow.stomp.subscribeText
 import org.hildan.krossbow.websocket.okhttp.OkHttpWebSocketClient
+import org.json.JSONObject
 
 class StompManager {
 
@@ -33,7 +34,8 @@ class StompManager {
     fun connectToAllTopics(
         gameId: String,
         onConnected: () -> Unit = {},
-        onLobbyUpdate: (LobbyState) -> Unit = {}
+        onLobbyUpdate: (LobbyState) -> Unit = {},
+        onErrorMessage: (String) -> Unit = {}
     ) {
         sessionJob = CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -42,7 +44,7 @@ class StompManager {
 
                 withContext(Dispatchers.Main) { onConnected() }
 
-                // Lobby-Subscription in eigener Coroutine
+                // LOBBY updates
                 launch {
                     Log.d("STOMP", "Subscribing to /topic/lobby/$gameId")
                     stompSession?.subscribeText("/topic/lobby/$gameId")?.collect { message ->
@@ -53,13 +55,26 @@ class StompManager {
                     }
                 }
 
-                // Game-Subscription in eigener Coroutine
+                // GAME updates
                 launch {
                     Log.d("STOMP", "Subscribing to /topic/game/$gameId")
                     stompSession?.subscribeText("/topic/game/$gameId")?.collect { message ->
-                        Log.d("STOMP", " Game-Message: $message")
+                        Log.d("STOMP", "Game-Message: $message")
                         val update = Gson().fromJson(message, GameUpdate::class.java)
                         _gameUpdates.value = update
+                    }
+                }
+
+                // ERROR messages
+                launch {
+                    Log.d("STOMP", "Subscribing to /topic/lobby/$gameId/error")
+                    stompSession?.subscribeText("/topic/lobby/$gameId/error")?.collect { message ->
+                        Log.d("STOMP", "Error-Message: $message")
+                        val json = JSONObject(message)
+                        val errorText = json.optString("error", "Unbekannter Fehler")
+                        withContext(Dispatchers.Main) {
+                            onErrorMessage(errorText)
+                        }
                     }
                 }
 
@@ -68,6 +83,7 @@ class StompManager {
             }
         }
     }
+
 
     fun sendOwnPositionRequest(jsonPayload: String) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -158,6 +174,21 @@ class StompManager {
             }
         }
     }
+
+    fun sendSelectedAvatar(gameId: String, player: String, avatarResId: Int) {
+        val payload = Gson().toJson(
+            mapOf("gameId" to gameId, "playerId" to player, "avatarResId" to avatarResId)
+        )
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                stompSession?.sendText("/app/lobby/avatar", payload)
+            } catch (e: Exception) {
+                Log.e("STOMP", "Avatar selection failed: ${e.message}", e)
+            }
+        }
+    }
+
+
 
     fun disconnect() {
         sessionJob?.cancel()
