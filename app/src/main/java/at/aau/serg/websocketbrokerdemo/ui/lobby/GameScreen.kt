@@ -119,7 +119,7 @@ fun GameScreen(
         ) {
 
             Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition)
-            BottomBar(gameVm, username, gameId, isMyTurn)
+            BottomBar(gameVm, username, gameId, isMyTurn,userSessionVm)
 
             //TODO show last MrX Position when revealed
             Box(modifier = Modifier
@@ -165,46 +165,28 @@ private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
     username: String?,
     gameId: String,
-    isMyTurn : Boolean
+    isMyTurn : Boolean,
+    userSessionVm: UserSessionViewModel
 
 ) {
-    Row(modifier = Modifier.align(Alignment.BottomCenter)) {
-        //Confirm Button
-        Button(
-            onClick = {
-                username?.let { name ->
-                    gameVm.move(
-                        gameId,
-                        name,
-                        gameVm.selectedStation,
-                        gameVm.selectedTicket.toString()
-                    )
-                    Thread.sleep(2000L)
-                    gameVm.fetchMrXPosition(gameId, username)
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue)),
-            enabled = isMyTurn
-        ) {
-            Text("Confirm")
+    val spacermod = Modifier.width(12.dp)
+    Row(modifier = Modifier.align(Alignment.BottomStart)) {
+
+        Spacer(spacermod)
+        Spacer(spacermod)
+        if (userSessionVm.role.value == "MRX") {
+            SelectableDoubleTicket(gameVm = gameVm)
+            Spacer(spacermod)
+            SelectableTicket(
+                gameVm = gameVm,
+                imageRes = R.drawable.ticket_black,
+                ticket = Ticket.BLACK
+            )
         }
 
-        // Tickets
-        val spacermod = Modifier.width(12.dp)
-        SelectableDoubleTicket(gameVm = gameVm)
-        Spacer(spacermod)
-        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_black, ticket = Ticket.BLACK)
-        Spacer(spacermod)
-        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_taxi, ticket = Ticket.TAXI)
-        Spacer(spacermod)
-        SelectableTicket(gameVm = gameVm, imageRes = R.drawable.ticket_bus, ticket = Ticket.BUS)
-        Spacer(spacermod)
-        SelectableTicket(
-            gameVm = gameVm,
-            imageRes = R.drawable.ticket_under,
-            ticket = Ticket.UNDERGROUND
-        )
-        Spacer(spacermod)
+    }
+
+    Row(modifier = Modifier.align(Alignment.BottomEnd)) {
 
         //Zoom
         Button(
@@ -221,6 +203,8 @@ private fun BoxScope.BottomBar(
         ) {
             Text("-")
         }
+        Spacer(spacermod)
+        Spacer(spacermod)
     }
 }
 
