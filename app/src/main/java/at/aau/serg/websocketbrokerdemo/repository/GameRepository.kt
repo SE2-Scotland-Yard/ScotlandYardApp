@@ -63,6 +63,10 @@ class GameRepository (
                 id to (x to y)
             }
 
+        }
 
+        suspend fun getMrXHistory(gameId: String): List<String> {
+            println("Repository: getMrXHistory wird aufgerufen mit gameId=$gameId")
+            return api.getMrXHistory(gameId)
         }
     }

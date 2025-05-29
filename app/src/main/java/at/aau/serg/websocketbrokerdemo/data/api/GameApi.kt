@@ -58,6 +58,8 @@ interface GameApi {
         @Query("gotTicket")     gotTicket: String
     ): MoveResponse
 
+    @GET("/api/game/mrXhistory")
+    suspend fun getMrXHistory(@Query("gameId") gameId: String): List<String>
 
 
 }
