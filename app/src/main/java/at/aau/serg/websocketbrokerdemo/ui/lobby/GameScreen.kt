@@ -105,6 +105,27 @@ fun GameScreen(
             visibleTicket = ""
         }
     }
+    //for mrX history
+    @Composable
+    fun TicketImage(ticket: String) {
+        val ticketRes = when (ticket.uppercase()) {
+            "TAXI" -> R.drawable.ticket_taxi
+            "BUS" -> R.drawable.ticket_bus
+            "UNDERGROUND" -> R.drawable.ticket_under
+            "BLACK" -> R.drawable.ticket_black
+            "DOUBLE" -> R.drawable.ticket_double
+            else -> null
+        }
+
+        ticketRes?.let {
+            Image(
+                painter = painterResource(id = it),
+                contentDescription = ticket,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+    }
+
 
 
 
@@ -218,11 +239,9 @@ fun GameScreen(
                                 )
                                 Spacer(Modifier.height(12.dp))
 
-                                mrXHistory.forEachIndexed { _, entry ->
-                                    Text(
-                                        text = entry,
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                mrXHistory.forEach { entry ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
                                             .padding(vertical = 4.dp)
                                             .background(
@@ -230,8 +249,34 @@ fun GameScreen(
                                                 shape = RoundedCornerShape(6.dp)
                                             )
                                             .padding(horizontal = 8.dp, vertical = 6.dp)
-                                    )
+                                    ) {
+                                        val round = entry.substringBefore(":")
+                                        val details = entry.substringAfter(":").trim()
+                                        val position = details.substringBefore(" ")
+                                        val ticket = details.substringAfter("(").substringBefore(")")
+
+                                        if (position != "?") {
+                                            // Reveal-Runde: Zahl + Ticket daneben
+                                            Text(
+                                                text = "$round: $position",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            TicketImage(ticket)
+                                        } else {
+                                            // Nicht-Reveal: Ticket ersetzt Position
+                                            Text(
+                                                text = "$round:",
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            TicketImage(ticket)
+                                        }
+                                    }
                                 }
+
                             }
                         }
                     }
