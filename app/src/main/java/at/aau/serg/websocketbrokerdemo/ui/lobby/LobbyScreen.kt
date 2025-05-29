@@ -25,6 +25,8 @@ import at.aau.serg.websocketbrokerdemo.model.Avatar
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
+import kotlinx.coroutines.delay
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,13 @@ fun LobbyScreen(
 
     val avatarsMap = lobbyState?.avatars
     val currentUsername = userSessionVm.username.value
+
+// Zeit der letzten Interaktion
+    var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
+
+// Dialog anzeigen
+    var showIdleDialog by remember { mutableStateOf(false) }
+
 
 
     val error by lobbyVm.errorMessage.collectAsState()
@@ -113,6 +122,30 @@ fun LobbyScreen(
             userSessionVm.roles.putAll(roleMap)
         }
     }
+    //Inaktivität  abfragen
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000) // alle 10 Sekunden checken
+            val now = System.currentTimeMillis()
+            if (now - lastInteractionTime > 2 * 60 * 1000 && !showIdleDialog) {
+                showIdleDialog = true
+            }
+        }
+    }
+    //nach 2min30 inaktivität spieler kicken
+    LaunchedEffect(showIdleDialog) {
+        if (showIdleDialog) {
+            delay(30_000) // 30 Sekunden zum Reagieren
+            if (showIdleDialog) {
+                val player = userSessionVm.username.value.orEmpty()
+                lobbyVm.sendLeave(gameId, player) {
+                    onLeft()
+                }
+            }
+        }
+    }
+
+
 
 
 
@@ -139,12 +172,14 @@ fun LobbyScreen(
                 actions = {
                     TextButton(
                         onClick = {
+                            lastInteractionTime = System.currentTimeMillis()
                             val player = userSessionVm.username.value.orEmpty()
-                            lobbyVm.leaveLobby(gameId, player) {
+                            lobbyVm.sendLeave(gameId, player) {
                                 onLeft()
                             }
                         }
-                    ) {
+                    )
+                    {
                         Text(
                             "Verlassen",
                             color = Color.Black
@@ -211,7 +246,11 @@ fun LobbyScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Button(
-                            onClick = { lobbyVm.selectRole(gameId, currentPlayer, "MRX") },
+                            onClick = {
+
+                                lobbyVm.selectRole(gameId, currentPlayer, "MRX",)
+                                lastInteractionTime = System.currentTimeMillis()
+                            },
                             enabled = !mrXTaken && !lobby.isStarted,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colorResource(id = R.color.buttonStartScreen),
@@ -225,6 +264,7 @@ fun LobbyScreen(
 
                         Button(
                             onClick = {
+                                lastInteractionTime = System.currentTimeMillis()
                                 lobbyVm.selectRole(
                                     gameId,
                                     currentPlayer,
@@ -268,6 +308,7 @@ fun LobbyScreen(
                         Button(
                             onClick = {
                                 lobbyVm.sendReady(gameId, currentPlayer)
+                                lastInteractionTime = System.currentTimeMillis()
                             },
                             enabled = isReadyEnabled,
                             colors = ButtonDefaults.buttonColors(
@@ -294,7 +335,12 @@ fun LobbyScreen(
                     }
 
                     Button(
-                        onClick = { showAvatarPicker = !showAvatarPicker },
+                        onClick = {
+
+                            showAvatarPicker = !showAvatarPicker
+                            lastInteractionTime = System.currentTimeMillis()
+
+                        },
                         enabled = userSessionVm.role.value == "DETECTIVE",
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorResource(id = R.color.buttonStartScreen),
@@ -395,5 +441,35 @@ fun LobbyScreen(
 
 
     }
+
+    if (showIdleDialog) {
+        AlertDialog(
+            onDismissRequest = {},
+
+            title = { Text("Noch da?") },
+            text = { Text("Du warst eine Weile inaktiv. Bist du noch da?") },
+
+            confirmButton = {
+                TextButton(onClick = {
+                    lastInteractionTime = System.currentTimeMillis()
+                    showIdleDialog = false
+                }) {
+                    Text("Ja")
+                }
+            },
+
+            dismissButton = {
+                TextButton(onClick = {
+                    val player = userSessionVm.username.value.orEmpty()
+                    lobbyVm.sendLeave(gameId, player) {
+                        onLeft()
+                    }
+                }) {
+                    Text("Nein, verlassen")
+                }
+            }
+        )
+    }
+
 
 }

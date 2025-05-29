@@ -85,67 +85,7 @@ class StompManager {
     }
 
 
-    fun sendOwnPositionRequest(jsonPayload: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                stompSession?.sendText("/app/game/requestOwnPosition", jsonPayload)
-                Log.d("STOMP", "Anfrage nach eigener Position gesendet: $jsonPayload")
-            } catch (e: Exception) {
-                Log.e("STOMP", "Fehler beim Senden der Position-Anfrage: ${e.message}", e)
-            }
-        }
-    }
 
-
-
-    fun subscribeToOwnPosition(playerId: String, onPositionReceived: (Int) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val subscription = stompSession
-                    ?.subscribeText("/topic/ownPosition/$playerId")
-
-                if (subscription != null) {
-                    Log.d("STOMP", " Subscribed to /topic/ownPosition/$playerId")
-                } else {
-                    Log.w("STOMP", "⚠ Subscription returned null for /topic/ownPosition/$playerId")
-                }
-
-                subscription?.collectLatest { message ->
-                    Log.d("STOMP", " MrX Position erhalten: $message")
-                    val json = Gson().fromJson(message, Map::class.java)
-                    val position = (json["position"] as Double).toInt()
-                    onPositionReceived(position)
-                }
-            } catch (e: Exception) {
-                Log.e("STOMP", " Fehler beim Abo auf ownPosition: ${e.message}", e)
-            }
-        }
-    }
-
-
-
-
-
-
-    fun connectToGame(gameId: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Log.d("STOMP", "Attempting to subscribe to /topic/game/$gameId")
-
-                stompSession
-                    ?.subscribeText("/topic/game/$gameId")
-                    ?.collectLatest { message ->
-                        Log.d("STOMP", "Game-Message received: $message")
-                        val gameUpdate = Gson().fromJson(message, GameUpdate::class.java)
-                        _gameUpdates.value = gameUpdate
-                    }
-
-                Log.d("STOMP", "Subscribed to /topic/game/$gameId")
-            } catch (e: Exception) {
-                Log.e("STOMP", "ame subscription failed: ${e.message}", e)
-            }
-        }
-    }
 
 
     fun sendReady(gameId: String, playerName: String) {
@@ -188,11 +128,27 @@ class StompManager {
         }
     }
 
+    fun sendLeaveLobby(gameId: String, playerId: String) {
+        val payload = mapOf("gameId" to gameId, "playerId" to playerId)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val json = Gson().toJson(payload)
+                stompSession?.sendText("/app/lobby/leave", json)
+                Log.d("STOMP", "Leave request sent: $json")
+            } catch (e: Exception) {
+                Log.e("STOMP", "Error sending leave request: ${e.message}", e)
+            }
+        }
+    }
+
+
 
 
     fun disconnect() {
         sessionJob?.cancel()
+        sessionJob = null
         stompSession = null
         Log.d("STOMP", "Disconnected")
     }
+
 }
