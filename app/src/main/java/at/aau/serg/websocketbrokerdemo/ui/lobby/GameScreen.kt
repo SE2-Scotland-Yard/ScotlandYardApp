@@ -48,7 +48,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,6 +92,18 @@ fun GameScreen(
     val screenHeight = remember { context.resources.displayMetrics.heightPixels }
 
     val isMyTurn = username == gameUpdate?.currentPlayer
+
+
+    val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
+        if (userSessionVm.role.value == "MRX") {
+            // For Mr. X, prioritize the dedicated mrXPosition if available
+            val position = mrXPosition ?: gameUpdate?.playerPositions?.get(userSessionVm.getMrXName())
+            position?.let { gameVm.pointPositions[it] }
+        } else {
+            // For detectives, use their position from playerPositions
+            gameUpdate?.playerPositions?.get(username)?.let { gameVm.pointPositions[it] }
+        }
+    }
 
     LaunchedEffect(myPosition, mrXPosition, gameVm.scale) {
 
@@ -215,7 +230,10 @@ fun GameScreen(
                         }
                     }
                     showMrXHistory = !showMrXHistory
-                }
+                },
+                scrollStateX = scrollStateX,  // ScrollStates übergeben
+                scrollStateY = scrollStateY,
+                playerPos = playerPos  // Spielerposition übergeben
             )
 
 
@@ -362,9 +380,34 @@ private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
     userSessionVm: UserSessionViewModel,
     showMrXHistory: Boolean,
-    onToggleHistory: () -> Unit
+    onToggleHistory: () -> Unit,
+    scrollStateX: ScrollState,
+    scrollStateY: ScrollState,
+    playerPos: Pair<Int, Int>?
 
 ) {
+    val context = LocalContext.current
+    val screenWidth = remember { context.resources.displayMetrics.widthPixels }
+    val screenHeight = remember { context.resources.displayMetrics.heightPixels }
+
+    fun adjustZoom(newScale: Float) {
+        playerPos?.let { (x, y) ->
+            val oldScale = gameVm.scale
+            gameVm.scale = newScale.coerceIn(0.5f, 3f)
+
+            // Scroll-Position berechnen und anpassen
+            val targetX = (x * gameVm.scale).toInt() - screenWidth / 2
+            val targetY = (y * gameVm.scale).toInt() - screenHeight / 2
+
+            CoroutineScope(Dispatchers.Main).launch {
+                scrollStateX.scrollTo(targetX)
+                scrollStateY.scrollTo(targetY)
+            }
+        }
+    }
+
+
+
     val spacermod = Modifier.width(12.dp)
     Row(modifier = Modifier.align(Alignment.BottomStart)) {
 
@@ -387,7 +430,7 @@ private fun BoxScope.BottomBar(
 
         //Zoom
         Button(
-            onClick = { gameVm.increaseZoom() },
+            onClick = { adjustZoom(gameVm.scale + 0.1f) },
             colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
         ) {
             Text("+")
@@ -395,7 +438,7 @@ private fun BoxScope.BottomBar(
         Spacer(spacermod)
 
         Button(
-            onClick = { gameVm.decreaseZoom() },
+            onClick = { adjustZoom(gameVm.scale - 0.1f)  },
             colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
         ) {
             Text("-")
