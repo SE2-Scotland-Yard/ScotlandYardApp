@@ -231,9 +231,11 @@ fun GameScreen(
                     }
                     showMrXHistory = !showMrXHistory
                 },
-                scrollStateX = scrollStateX,  // ScrollStates übergeben
+                scrollStateX = scrollStateX,
                 scrollStateY = scrollStateY,
-                playerPos = playerPos  // Spielerposition übergeben
+                playerPos = playerPos,
+                gameId = gameId,
+                username = username
             )
 
 
@@ -369,7 +371,7 @@ fun GameScreen(
             ){
                 Column {
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
-             }
+                }
             }
         }
     }
@@ -383,7 +385,9 @@ private fun BoxScope.BottomBar(
     onToggleHistory: () -> Unit,
     scrollStateX: ScrollState,
     scrollStateY: ScrollState,
-    playerPos: Pair<Int, Int>?
+    playerPos: Pair<Int, Int>?,
+    gameId: String,
+    username: String?
 
 ) {
     val context = LocalContext.current
@@ -420,7 +424,20 @@ private fun BoxScope.BottomBar(
 
         // Double Move Button (nur für Mr. X)
         if (userSessionVm.role.value == "MRX") {
-            SelectableDoubleTicket(gameVm = gameVm)
+            SelectableDoubleTicket(
+                gameVm = gameVm,
+                onDoubleMoveSelected = { isDoubleMove ->
+                    if (isDoubleMove) {
+                        username?.let { name ->
+                            gameVm.fetchAllowedDoubleMoves(gameId, name)
+                        }
+                    } else {
+                        username?.let { name ->
+                            gameVm.fetchAllowedMoves(gameId, name)
+                        }
+                    }
+                }
+            )
             Spacer(spacermod)
         }
 
@@ -477,7 +494,8 @@ fun BlackMoveModeButton(gameVm: GameViewModel) {
 
 @Composable
 fun SelectableDoubleTicket(
-    gameVm: GameViewModel
+    gameVm: GameViewModel,
+    onDoubleMoveSelected: (Boolean) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -487,7 +505,11 @@ fun SelectableDoubleTicket(
                 color = if (gameVm.isDoubleMoveMode) Color.Blue else Color.Transparent,
                 shape = RoundedCornerShape(8.dp)
             )
-            .clickable { gameVm.isDoubleMoveMode = !gameVm.isDoubleMoveMode }
+            .clickable {
+                val newState = !gameVm.isDoubleMoveMode
+                gameVm.isDoubleMoveMode = newState
+                onDoubleMoveSelected(newState)
+            }
     ) {
         Image(
             painter = painterResource(id = R.drawable.ticket_double),
@@ -559,6 +581,9 @@ private fun Stations(
     if (!isMyTurn) return
     val buttonSizeDp = (1 * gameVm.scale).dp
 
+    val doubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
+    val movesToShow = if (gameVm.isDoubleMoveMode) doubleMoves else allowedMoves
+
     val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
 
 
@@ -568,7 +593,7 @@ private fun Stations(
         val yDp = with(density) { (yPx * gameVm.scale).toDp() }
 
         // Filter moves that involve the current station
-        val movesForStation = allowedMoves.filter { move ->
+        val movesForStation = movesToShow.filter { move ->
             try {
                 move.keys.contains(id)
             } catch (e: Exception) {
@@ -612,34 +637,42 @@ private fun Stations(
                     movesForStation.forEach { move ->
 
 
-                            val (targetStation, ticketType) = when {
-                                move.keys.size >= 2 -> {
-                                    val target = move.keys.firstOrNull { it != id } ?: -1
-                                    val ticket = move.values.firstOrNull() ?: ""
-                                    target to ticket
-                                }
-                                else -> {
-                                    move.keys.firstOrNull()?.let { key ->
-                                        key to (move[key] ?: "")
-                                    } ?: (-1 to "")
-                                }
+                        val (targetStation, ticketType) = when {
+                            move.keys.size >= 2 -> {
+                                val target = move.keys.firstOrNull { it != id } ?: -1
+                                val ticket = move.values.firstOrNull() ?: ""
+                                target to ticket
                             }
+                            else -> {
+                                move.keys.firstOrNull()?.let { key ->
+                                    key to (move[key] ?: "")
+                                } ?: (-1 to "")
+                            }
+                        }
 
-                            if (targetStation != -1 && ticketType.isNotEmpty()) {
-                                DropdownMenuItem(
-                                    text = { Text("$ticketType → Station $targetStation") },
-                                    onClick = {
-                                        username?.let { name ->
-                                            if (gameVm.isBlackMoveMode) {
-                                                gameVm.blackMove(gameId, name, targetStation,ticketType)
-                                            } else {
+                        if (targetStation != -1 && ticketType.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("$ticketType → Station $targetStation") },
+                                onClick = {
+                                    username?.let { name ->
+                                        when {
+                                            gameVm.isBlackMoveMode -> {
+                                                gameVm.blackMove(gameId, name, targetStation, ticketType)
+                                            }
+                                            gameVm.isDoubleMoveMode -> {
+                                                // Hier wird die spezielle Double-Move API aufgerufen
+                                                gameVm.doubleMove(gameId, name, targetStation, ticketType)
+                                            }
+                                            else -> {
+
                                                 gameVm.move(gameId, name, targetStation, ticketType)
                                             }
-                                            expandedStates[id] = false
                                         }
+                                        expandedStates[id] = false
                                     }
-                                )
-                            }
+                                }
+                            )
+                        }
 
                     }
                 }
@@ -884,8 +917,3 @@ fun TicketImage(ticket: String) {
         )
     }
 }
-
-
-
-
-
