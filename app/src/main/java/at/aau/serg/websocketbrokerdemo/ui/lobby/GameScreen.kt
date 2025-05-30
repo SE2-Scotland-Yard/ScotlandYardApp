@@ -4,11 +4,19 @@ import GameViewModel
 import android.app.Activity
 import android.graphics.Color.alpha
 import android.util.Log
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
@@ -44,6 +52,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -884,6 +893,7 @@ fun TicketBar(tickets: Map<String, Int>) {
 }
 
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun TicketWithCount(
     ticket: String,
@@ -900,37 +910,94 @@ fun TicketWithCount(
     }
 
     ticketRes?.let {
+        var previousCount by remember { mutableStateOf(count) }
+        var animateScale by remember { mutableStateOf(false) }
+
+        val scale by animateFloatAsState(
+            targetValue = if (animateScale) 1.2f else 1f,
+            animationSpec = tween(durationMillis = 300),
+            label = "scaleOnTicketChange"
+        )
+
+        // Effekt beim Count-Wechsel triggern
+        LaunchedEffect(count) {
+            if (count != previousCount) {
+                animateScale = true
+                previousCount = count
+                delay(300)
+                animateScale = false
+            }
+        }
+
         Box(
             contentAlignment = Alignment.TopEnd,
             modifier = modifier
                 .size(width = 72.dp, height = 96.dp)
+                .graphicsLayer {
+                    rotationZ = -8f
+                    scaleX = scale
+                    scaleY = scale
+                }
         ) {
             Image(
                 painter = painterResource(id = it),
                 contentDescription = ticket,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        rotationZ = -8f
-                    },
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit
             )
 
             Box(
                 modifier = Modifier
-                    .offset(x = (-6).dp, y = (-6).dp)
+                    .offset(x = (-50).dp, y = 15.dp)
                     .background(Color.Black, shape = CircleShape)
                     .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
-                Text(
-                    text = count.toString(),
-                    color = Color.White,
-                    fontSize = 12.sp
-                )
+                AnimatedContent(
+                    targetState = count,
+                    transitionSpec = {
+                        (slideInVertically { -it } + fadeIn() + scaleIn()) togetherWith
+                                (slideOutVertically { it } + fadeOut() + scaleOut())
+                    },
+                    label = "ticketCount"
+                ) { animatedCount ->
+                    Text(
+                        text = animatedCount.toString(),
+                        color = Color.White,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
     }
 }
+
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun MrXTicketPreview() {
+    val allTickets = listOf(
+        "TAXI" to 4,
+        "BUS" to 3,
+        "UNDERGROUND" to 2,
+        "BLACK" to 1,
+        "DOUBLE" to 1
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy((-32).dp)
+    ) {
+        allTickets.forEach { (ticket, count) ->
+            TicketWithCount(ticket = ticket, count = count)
+        }
+    }
+}
+
+
 
 
 
