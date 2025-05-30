@@ -145,6 +145,15 @@ fun LobbyScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000) // alle 30 Sekunden
+            val player = userSessionVm.username.value ?: continue
+            lobbyVm.sendPing(gameId, player)
+        }
+    }
+
+
 
 
 
