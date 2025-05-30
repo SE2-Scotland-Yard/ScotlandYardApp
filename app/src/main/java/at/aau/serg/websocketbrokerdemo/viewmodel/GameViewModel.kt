@@ -129,6 +129,19 @@ class GameViewModel(
         scale -= 0.1f
     }
 
+    var onZoomChanged: ((Float, Float) -> Unit)? = null
+
+    fun increaseZoom(playerX: Float, playerY: Float) {
+        scale = (scale + 0.1f).coerceIn(0.5f, 3f)
+        onZoomChanged?.invoke(playerX, playerY)
+    }
+
+    fun decreaseZoom(playerX: Float, playerY: Float) {
+        scale = (scale - 0.1f).coerceIn(0.5f, 3f)
+        onZoomChanged?.invoke(playerX, playerY)
+    }
+
+
     fun fetchMrXHistory(gameId: String, onResult: (List<String>) -> Unit) {
         viewModelScope.launch {
             try {
