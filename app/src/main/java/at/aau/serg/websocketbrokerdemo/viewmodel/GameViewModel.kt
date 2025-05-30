@@ -140,4 +140,9 @@ class GameViewModel(
         }
     }
 
+    fun resetMoveModes() {
+        isBlackMoveMode = false
+        isDoubleMoveMode = false
+    }
+
 }

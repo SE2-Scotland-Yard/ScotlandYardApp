@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -62,21 +63,11 @@ fun GameScreen(
 ) {
     val username = userSessionVm.username.value
     val gameUpdate by lobbyVm.gameState.collectAsState()
-    val message by remember { derivedStateOf { gameVm.message } }
     val allowedMoves by remember { derivedStateOf { gameVm.allowedMoves } }
     val mrXPosition by remember { derivedStateOf { gameVm.mrXPosition } }
-    val allowedMovesDetails by remember { derivedStateOf { gameVm.allowedMovesDetails } }
-    val error by remember { derivedStateOf { gameVm.errorMessage } }
-    val allowedDoubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
-    val isDoubleMoveMode by remember { derivedStateOf { gameVm.isDoubleMoveMode } }
     var showWinnerOverlay by remember { mutableStateOf(false) }
 
-    //TODO import Double move from old Gamescreen
-    //States für DoubleMove
-    var firstMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
-    var secondMoveSelected by remember { mutableStateOf<MrXDoubleMoveResponse?>(null) }
-    var expandedFirstMove by remember { mutableStateOf(false) }
-    var expandedSecondMove by remember { mutableStateOf(false) }
+
     val playerPositions: Map<String, Int> = gameUpdate?.playerPositions ?: emptyMap()
     val winner = gameUpdate?.winner
 
@@ -184,6 +175,9 @@ fun GameScreen(
             if (userSessionVm.role.value == "MRX") {
                 gameVm.fetchAllowedDoubleMoves(gameId, username)
             }
+            if (gameUpdate?.currentPlayer != username) {
+                gameVm.resetMoveModes()
+            }
         }
     }
     //Verwendetes Ticket für 2 Sek einblenden
@@ -195,8 +189,6 @@ fun GameScreen(
             visibleTicket = ""
         }
     }
-
-
 
 
     Scaffold { padding ->
@@ -214,9 +206,6 @@ fun GameScreen(
             Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition,scrollStateX,scrollStateY)
             BottomBar(
                 gameVm = gameVm,
-                username = username,
-                gameId = gameId,
-                isMyTurn = isMyTurn,
                 userSessionVm = userSessionVm,
                 showMrXHistory = showMrXHistory,
                 onToggleHistory = {
@@ -355,7 +344,6 @@ fun GameScreen(
                 )
             }
 
-            //TODO show last MrX Position when revealed
             Box(modifier = Modifier
                 .padding(2.dp)
                 .align(Alignment.TopStart)
@@ -363,36 +351,7 @@ fun GameScreen(
             ){
                 Column {
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
-
-                    //Placeholder Text
-                    // TODO replace Text with showing Players in Board
-                    Text("Spielerpositionen:", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                    Spacer(Modifier.height(8.dp))
-
-                    gameUpdate?.winner?.let { winner ->
-                        Text("Winner: $winner")
-                    }
-
-                    if (userSessionVm.role.value == "MRX") {
-                        mrXPosition?.let {
-                            Text("MrX steht auf: $it", color = Color.White)
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                            Text("$name steht auf Feld $pos", color = Color.White)
-                        }
-                    } else {
-                        gameUpdate?.playerPositions?.forEach { (name, pos) ->
-                            Text("$name steht auf Feld $pos", color = Color.White)
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    val myPosition = gameUpdate?.playerPositions?.get(username)
-                    myPosition?.let {
-                        Spacer(Modifier.height(16.dp))
-                        Text("➡ Du stehst auf Feld $it", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                        Spacer(Modifier.height(16.dp))
-                    }                }
+             }
             }
         }
     }
@@ -401,9 +360,6 @@ fun GameScreen(
 @Composable
 private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
-    username: String?,
-    gameId: String,
-    isMyTurn : Boolean,
     userSessionVm: UserSessionViewModel,
     showMrXHistory: Boolean,
     onToggleHistory: () -> Unit
@@ -471,31 +427,7 @@ fun BlackMoveModeButton(gameVm: GameViewModel) {
     ) {
         Image(
             painter = painterResource(id = R.drawable.ticket_black),
-            contentDescription = "Black Move Mode",
-            modifier = Modifier.size(48.dp)
-        )
-    }
-}
-
-@Composable
-fun SelectableTicket(
-    gameVm: GameViewModel,
-    imageRes: Int,
-    ticket: Ticket,
-) {
-    Box(
-        modifier = Modifier
-            .padding(8.dp)
-            .border(
-                width = if (gameVm.selectedTicket == ticket) 3.dp else 0.dp,
-                color = if (gameVm.selectedTicket == ticket) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable { gameVm.selectedTicket = ticket }
-    ) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = null,
+            contentDescription = "Black Move Mode"
         )
     }
 }
@@ -539,22 +471,19 @@ fun Map(
     val intrinsicSize = mapPainter.intrinsicSize
     val points = gameVm.pointPositions
 
-    //val scrollStateX = rememberScrollState()
-    //val scrollStateY = rememberScrollState()
-
     val density = LocalDensity.current
     val virtualWidthDp = with(density) { (intrinsicSize.width * gameVm.scale).toDp() }
     val virtualHeightDp = with(density) { (intrinsicSize.height * gameVm.scale).toDp() }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Scrollable container
+
         Box(
             modifier = Modifier
                 .horizontalScroll(scrollStateX)
                 .verticalScroll(scrollStateY)
                 .align(Alignment.Center)
         ) {
-            // Content sized to scaled dimensions
+
             Box(
                 modifier = Modifier
                     .size(virtualWidthDp, virtualHeightDp)
@@ -687,7 +616,6 @@ private fun PlayerPositions(
 ) {
     val iconSizeDp = (40 * gameVm.scale).dp
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
-    var previousMrXPosition by remember { mutableStateOf(mrXPosition) }
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
 
@@ -696,28 +624,19 @@ private fun PlayerPositions(
     }
 
 
-    val defaultPlayerIcons = listOf(
-        R.drawable.bear,
-        R.drawable.panda,
-        R.drawable.fox,
-        R.drawable.pig,
-        R.drawable.crocodile,
-        R.drawable.duck
-    )
-
     fun getIconForPlayer(name: String): Int {
-        return userSessionVm.getAvatarDrawableRes(name)
+        return if (userSessionVm.isMrX(name)) {
+            R.drawable.mrx
+        } else {
+            userSessionVm.getAvatarDrawableRes(name)
+        }
     }
 
-    // Normale Spieler-Icons für alle anzeigen
+
     playerPositions.forEach { (playerName, positionId) ->
+        if (userSessionVm.isMrX(playerName)) return@forEach
         points[positionId]?.let { (xPx, yPx) ->
-            val currentPos = xPx to yPx
 
-            // Letzte bekannte Position dieses Spielers
-            val lastPos = lastPlayerPositions[playerName]
-
-            // Animierte Position nur wenn sich die Position geändert hat (ohne Zoom)
             val animatedX by animateFloatAsState(
                 targetValue = xPx.toFloat(),
                 animationSpec = tween(durationMillis = 1000),
@@ -730,7 +649,6 @@ private fun PlayerPositions(
                 label = "yAnimation_$playerName"
             )
 
-            // Zoom erst hier anwenden
             val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
             val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
@@ -752,14 +670,32 @@ private fun PlayerPositions(
         }
     }
 
-    // Mr.X Icon nur anzeigen, wenn der aktuelle Spieler Mr.X ist
+    val mrXPos = playerPositions[userSessionVm.getMrXName()]
+
+    mrXPos?.let { positionId ->
+        points[positionId]?.let { (xPx, yPx) ->
+            val animatedX by animateFloatAsState(targetValue = xPx.toFloat(), animationSpec = tween(1000))
+            val animatedY by animateFloatAsState(targetValue = yPx.toFloat(), animationSpec = tween(1000))
+
+            val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
+            val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
+
+            Image(
+                painter = painterResource(id = R.drawable.mrx), // Spezielles Mr. X Icon
+                contentDescription = "Position von Mr. X",
+                modifier = Modifier
+                    .size(iconSizeDp)
+                    .offset(displayX - (iconSizeDp * 1.2f) / 2, displayY - (iconSizeDp * 1.2f) / 2),
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
+
+
     if (userSessionVm.role.value == "MRX") {
         mrXPosition?.let { positionId ->
             points[positionId]?.let { (xPx, yPx) ->
 
-                val currentPos = xPx to yPx
-
-                // Animierte Position nur wenn sich die Position geändert hat
                 val animatedX by animateFloatAsState(
                     targetValue = xPx.toFloat(),
                     animationSpec = tween(durationMillis = 1000),
@@ -772,7 +708,6 @@ private fun PlayerPositions(
                     label = "yAnimation_MrX"
                 )
 
-                // Zoom erst hier anwenden
                 val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
                 val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 

@@ -19,4 +19,11 @@ class UserSessionViewModel : ViewModel() {
         return Avatar.fromId(avatarIds[playerName] ?: 1)?.drawableRes ?: R.drawable.bear
     }
 
+    fun isMrX(playerName: String): Boolean {
+        return roles[playerName] == "MRX"
+    }
+
+    fun getMrXName(): String? {
+        return roles.entries.firstOrNull { it.value == "MRX" }?.key
+    }
 }
