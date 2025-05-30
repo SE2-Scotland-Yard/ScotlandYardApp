@@ -139,6 +139,11 @@ class LobbyViewModel(
         stompManager.sendReady(gameId, playerName)
     }
 
+    fun sendPing(gameId: String, player: String) {
+        stompManager.sendPing(gameId, player)
+    }
+
+
     /** 6) öffentliche Lobbys */
     fun fetchPublicLobbies() = viewModelScope.launch {
         runCatching {

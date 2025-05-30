@@ -140,6 +140,20 @@ class StompManager {
             }
         }
     }
+    //aktivität senden
+    fun sendPing(gameId: String, playerId: String) {
+        val payload = mapOf("gameId" to gameId, "playerId" to playerId)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val json = Gson().toJson(payload)
+                stompSession?.sendText("/app/lobby/ping", json)
+                Log.d("STOMP", "Ping sent: $json")
+            } catch (e: Exception) {
+                Log.e("STOMP", "Error sending ping: ${e.message}", e)
+            }
+        }
+    }
+
 
 
 
