@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -217,6 +218,22 @@ fun GameScreen(
                     showMrXHistory = !showMrXHistory
                 }
             )
+
+            val myTickets = gameUpdate?.ticketInventory?.get(username)
+
+            if (myTickets != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp)
+                ) {
+                    TicketBar(tickets = myTickets)
+                }
+            }
+
+
+
 
 
             //verwendetes Ticket anzeigen
@@ -841,6 +858,84 @@ fun TicketImage(ticket: String) {
         )
     }
 }
+
+@Composable
+fun TicketBar(tickets: Map<String, Int>) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp) // sichtbarer Bereich
+            .offset(y = 40.dp) //nach unten berschieben
+    ) {
+        Row(
+            modifier = Modifier.align(Alignment.TopCenter),
+            horizontalArrangement = Arrangement.spacedBy((-20).dp) // Überlappung
+        ) {
+            var z = 0f
+            tickets.entries.sortedBy { it.key }.forEach { (ticket, count) ->
+                TicketWithCount(
+                    ticket = ticket,
+                    count = count,
+                    modifier = Modifier.zIndex(z++)
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun TicketWithCount(
+    ticket: String,
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    val ticketRes = when (ticket.uppercase()) {
+        "TAXI" -> R.drawable.ticket_taxi
+        "BUS" -> R.drawable.ticket_bus
+        "UNDERGROUND" -> R.drawable.ticket_under
+        "BLACK" -> R.drawable.ticket_black
+        "DOUBLE" -> R.drawable.ticket_double
+        else -> null
+    }
+
+    ticketRes?.let {
+        Box(
+            contentAlignment = Alignment.TopEnd,
+            modifier = modifier
+                .size(width = 72.dp, height = 96.dp)
+        ) {
+            Image(
+                painter = painterResource(id = it),
+                contentDescription = ticket,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        rotationZ = -8f
+                    },
+                contentScale = ContentScale.Fit
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(x = (-6).dp, y = (-6).dp)
+                    .background(Color.Black, shape = CircleShape)
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = count.toString(),
+                    color = Color.White,
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+
+
+
+
 
 
 
