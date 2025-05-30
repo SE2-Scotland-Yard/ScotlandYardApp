@@ -8,6 +8,7 @@ import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -115,27 +116,20 @@ class LobbyViewModel(
     }
 
 
-    fun leaveLobby(
-        gameId: String,
-        playerName: String,
-        onLeft: () -> Unit
-    ) = viewModelScope.launch {
-        val result = withContext(Dispatchers.IO) {
-            runCatching { repository.leaveLobby(gameId, playerName) }
+    fun sendLeave(gameId: String, player: String, onLeft: () -> Unit) = viewModelScope.launch {
+        stompManager.sendLeaveLobby(gameId, player)
+        delay(200)
+
+        stompManager.disconnect()
+        alreadyConnected = false
+
+        _createdLobby.value = null
+        _lobbyStatus.value = null
+
+        withContext(Dispatchers.Main) {
+            onLeft()
         }
-
-        result.onSuccess {
-            stompManager.disconnect()
-            _createdLobby.value = null
-
-            /**  UI‑Callback muss auf Main!   */
-            withContext(Dispatchers.Main) {
-                onLeft()
-            }
-        }.onFailure { it.printStackTrace() }
     }
-
-
 
 
 
