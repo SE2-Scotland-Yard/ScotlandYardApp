@@ -1,6 +1,6 @@
 package at.aau.serg.websocketbrokerdemo.data.model
 
-import android.app.GameState
+
 
 data class GameUpdate(
     val gameId: String,
