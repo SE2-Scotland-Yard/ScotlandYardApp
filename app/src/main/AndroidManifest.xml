@@ -32,7 +32,10 @@
 
         <activity
             android:name="at.aau.serg.websocketbrokerdemo.ui.auth.AuthActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            tools:ignore="DiscouragedApi">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -41,7 +44,9 @@
 
         <activity
             android:name="at.aau.serg.websocketbrokerdemo.ui.lobby.LobbyActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            tools:ignore="DiscouragedApi" />
 
     </application>
 
