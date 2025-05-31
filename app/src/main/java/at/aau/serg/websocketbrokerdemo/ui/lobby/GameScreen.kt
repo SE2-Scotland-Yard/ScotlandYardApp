@@ -652,7 +652,7 @@ private fun Stations(
 
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("$ticketType → Station $targetStation") },
+                                text = { Text("${ticketType.substringBeforeLast("+")} → Station $targetStation")  },
                                 onClick = {
                                     username?.let { name ->
                                         when {
