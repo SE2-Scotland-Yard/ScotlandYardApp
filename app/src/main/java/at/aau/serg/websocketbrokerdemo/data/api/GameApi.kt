@@ -37,16 +37,14 @@ interface GameApi {
     suspend fun getAllowedDoubleMoves(
         @Query("gameId") gameId: String,
         @Query("name") name: String
-    ): List<MrXDoubleMoveResponse>
+    ): List<AllowedMoveResponse>
 
     @POST("api/game/moveDouble")
     suspend fun moveDouble(
         @Query("gameId") gameId: String,
         @Query("name") name: String,
-        @Query("firstTo") firstTo: Int,
-        @Query("firstTicket") firstTicket: String,
-        @Query("secondTo") secondTo: Int,
-        @Query("secondTicket") secondTicket: String
+        @Query("to") to: Int,
+        @Query("gotTicket") gotTicket: String
     ): MoveResponse
 
 

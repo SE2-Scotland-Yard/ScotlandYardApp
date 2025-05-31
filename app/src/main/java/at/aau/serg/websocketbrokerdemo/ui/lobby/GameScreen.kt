@@ -58,7 +58,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +102,18 @@ fun GameScreen(
     val screenHeight = remember { context.resources.displayMetrics.heightPixels }
 
     val isMyTurn = username == gameUpdate?.currentPlayer
+
+
+    val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
+        if (userSessionVm.role.value == "MRX") {
+            // For Mr. X, prioritize the dedicated mrXPosition if available
+            val position = mrXPosition ?: gameUpdate?.playerPositions?.get(userSessionVm.getMrXName())
+            position?.let { gameVm.pointPositions[it] }
+        } else {
+            // For detectives, use their position from playerPositions
+            gameUpdate?.playerPositions?.get(username)?.let { gameVm.pointPositions[it] }
+        }
+    }
 
     LaunchedEffect(myPosition, mrXPosition, gameVm.scale) {
 
@@ -225,7 +240,12 @@ fun GameScreen(
                         }
                     }
                     showMrXHistory = !showMrXHistory
-                }
+                },
+                scrollStateX = scrollStateX,
+                scrollStateY = scrollStateY,
+                playerPos = playerPos,
+                gameId = gameId,
+                username = username
             )
 
             val myTickets = gameUpdate?.ticketInventory?.get(username)
@@ -366,7 +386,9 @@ fun GameScreen(
                 WinnerOverlay(
                     winner = winner,
                     currentPlayerRole = userSessionVm.role.value,
-                    onDismiss = { navigateToLobby = true  }
+                    onDismiss = { navigateToLobby = true  },
+                    userSessionVm = userSessionVm,
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
                 )
             }
 
@@ -377,7 +399,7 @@ fun GameScreen(
             ){
                 Column {
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
-             }
+                }
             }
         }
     }
@@ -388,9 +410,36 @@ private fun BoxScope.BottomBar(
     gameVm: GameViewModel,
     userSessionVm: UserSessionViewModel,
     showMrXHistory: Boolean,
-    onToggleHistory: () -> Unit
+    onToggleHistory: () -> Unit,
+    scrollStateX: ScrollState,
+    scrollStateY: ScrollState,
+    playerPos: Pair<Int, Int>?,
+    gameId: String,
+    username: String?
 
 ) {
+    val context = LocalContext.current
+    val screenWidth = remember { context.resources.displayMetrics.widthPixels }
+    val screenHeight = remember { context.resources.displayMetrics.heightPixels }
+
+    fun adjustZoom(newScale: Float) {
+        playerPos?.let { (x, y) ->
+            val oldScale = gameVm.scale
+            gameVm.scale = newScale.coerceIn(0.5f, 3f)
+
+            // Scroll-Position berechnen und anpassen
+            val targetX = (x * gameVm.scale).toInt() - screenWidth / 2
+            val targetY = (y * gameVm.scale).toInt() - screenHeight / 2
+
+            CoroutineScope(Dispatchers.Main).launch {
+                scrollStateX.scrollTo(targetX)
+                scrollStateY.scrollTo(targetY)
+            }
+        }
+    }
+
+
+
     val spacermod = Modifier.width(12.dp)
     Row(modifier = Modifier.align(Alignment.BottomStart)) {
 
@@ -403,7 +452,20 @@ private fun BoxScope.BottomBar(
 
         // Double Move Button (nur für Mr. X)
         if (userSessionVm.role.value == "MRX") {
-            SelectableDoubleTicket(gameVm = gameVm)
+            SelectableDoubleTicket(
+                gameVm = gameVm,
+                onDoubleMoveSelected = { isDoubleMove ->
+                    if (isDoubleMove) {
+                        username?.let { name ->
+                            gameVm.fetchAllowedDoubleMoves(gameId, name)
+                        }
+                    } else {
+                        username?.let { name ->
+                            gameVm.fetchAllowedMoves(gameId, name)
+                        }
+                    }
+                }
+            )
             Spacer(spacermod)
         }
 
@@ -413,7 +475,7 @@ private fun BoxScope.BottomBar(
 
         //Zoom
         Button(
-            onClick = { gameVm.increaseZoom() },
+            onClick = { adjustZoom(gameVm.scale + 0.1f) },
             colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
         ) {
             Text("+")
@@ -421,7 +483,7 @@ private fun BoxScope.BottomBar(
         Spacer(spacermod)
 
         Button(
-            onClick = { gameVm.decreaseZoom() },
+            onClick = { adjustZoom(gameVm.scale - 0.1f)  },
             colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
         ) {
             Text("-")
@@ -460,7 +522,8 @@ fun BlackMoveModeButton(gameVm: GameViewModel) {
 
 @Composable
 fun SelectableDoubleTicket(
-    gameVm: GameViewModel
+    gameVm: GameViewModel,
+    onDoubleMoveSelected: (Boolean) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -470,7 +533,11 @@ fun SelectableDoubleTicket(
                 color = if (gameVm.isDoubleMoveMode) Color.Blue else Color.Transparent,
                 shape = RoundedCornerShape(8.dp)
             )
-            .clickable { gameVm.isDoubleMoveMode = !gameVm.isDoubleMoveMode }
+            .clickable {
+                val newState = !gameVm.isDoubleMoveMode
+                gameVm.isDoubleMoveMode = newState
+                onDoubleMoveSelected(newState)
+            }
     ) {
         Image(
             painter = painterResource(id = R.drawable.ticket_double),
@@ -542,6 +609,9 @@ private fun Stations(
     if (!isMyTurn) return
     val buttonSizeDp = (1 * gameVm.scale).dp
 
+    val doubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
+    val movesToShow = if (gameVm.isDoubleMoveMode) doubleMoves else allowedMoves
+
     val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
 
 
@@ -551,7 +621,7 @@ private fun Stations(
         val yDp = with(density) { (yPx * gameVm.scale).toDp() }
 
         // Filter moves that involve the current station
-        val movesForStation = allowedMoves.filter { move ->
+        val movesForStation = movesToShow.filter { move ->
             try {
                 move.keys.contains(id)
             } catch (e: Exception) {
@@ -595,34 +665,47 @@ private fun Stations(
                     movesForStation.forEach { move ->
 
 
-                            val (targetStation, ticketType) = when {
-                                move.keys.size >= 2 -> {
-                                    val target = move.keys.firstOrNull { it != id } ?: -1
-                                    val ticket = move.values.firstOrNull() ?: ""
-                                    target to ticket
-                                }
-                                else -> {
-                                    move.keys.firstOrNull()?.let { key ->
-                                        key to (move[key] ?: "")
-                                    } ?: (-1 to "")
-                                }
+                        val (targetStation, ticketType) = when {
+                            move.keys.size >= 2 -> {
+                                val target = move.keys.firstOrNull { it != id } ?: -1
+                                val ticket = move.values.firstOrNull() ?: ""
+                                target to ticket
                             }
+                            else -> {
+                                move.keys.firstOrNull()?.let { key ->
+                                    key to (move[key] ?: "")
+                                } ?: (-1 to "")
+                            }
+                        }
 
-                            if (targetStation != -1 && ticketType.isNotEmpty()) {
-                                DropdownMenuItem(
-                                    text = { Text("$ticketType → Station $targetStation") },
-                                    onClick = {
-                                        username?.let { name ->
-                                            if (gameVm.isBlackMoveMode) {
-                                                gameVm.blackMove(gameId, name, targetStation,ticketType)
-                                            } else {
+                        if (targetStation != -1 && ticketType.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("${ticketType.substringBeforeLast("+")} → Station $targetStation")  },
+                                onClick = {
+                                    username?.let { name ->
+                                        when {
+                                            gameVm.isBlackMoveMode && gameVm.isDoubleMoveMode -> {
+                                                val parts = ticketType.split("+")
+                                                val positionPart = if (parts.size > 2) parts.last() else ""
+                                                val blackTicket = "BLACK+BLACK" + if (positionPart.isNotEmpty()) "+$positionPart" else ""
+                                                gameVm.doubleMove(gameId, name, targetStation, blackTicket)
+                                            }
+                                            gameVm.isBlackMoveMode -> {
+                                                gameVm.blackMove(gameId, name, targetStation, ticketType)
+                                            }
+                                            gameVm.isDoubleMoveMode -> {
+                                                gameVm.doubleMove(gameId, name, targetStation, ticketType)
+                                            }
+                                            else -> {
+
                                                 gameVm.move(gameId, name, targetStation, ticketType)
                                             }
-                                            expandedStates[id] = false
                                         }
+                                        expandedStates[id] = false
                                     }
-                                )
-                            }
+                                }
+                            )
+                        }
 
                     }
                 }
@@ -759,7 +842,9 @@ private fun PlayerPositions(
 fun WinnerOverlay(
     winner: String?,
     currentPlayerRole: String?,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    userSessionVm: UserSessionViewModel,
+    playerPositions: Map<String, Int>
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
@@ -785,6 +870,13 @@ fun WinnerOverlay(
         !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben dich gefangen!"
         else -> "Glückwunsch! Ihr habt Mr. X gefangen!"
     }
+    val winnerIcons = if (isMrXWinner) {
+        listOf(R.drawable.mrx)
+    } else {
+        playerPositions.keys
+            .filterNot { userSessionVm.isMrX(it) }
+            .map { userSessionVm.getAvatarDrawableRes(it) }
+    }
 
     Box(
         modifier = Modifier
@@ -804,14 +896,34 @@ fun WinnerOverlay(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Icon(
-                painter = painterResource(
-                    id = if (isMrXWinner) R.drawable.mrx else R.drawable.fox
-                ),
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = Color.White
-            )
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 16.dp)
+            ) {
+                if (isMrXWinner) {
+                    // Nur MrX Icon
+                    Image(
+                        painter = painterResource(id = R.drawable.mrx),
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    // Icons aller Detectives
+                    playerPositions.keys
+                        .filterNot { userSessionVm.isMrX(it) }
+                        .forEach { player ->
+                            Image(
+                                painter = painterResource(id = userSessionVm.getAvatarDrawableRes(player)),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .padding(horizontal = 8.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -868,13 +980,14 @@ fun TicketImage(ticket: String) {
     }
 }
 
+
 @Composable
 fun TicketBar(tickets: Map<String, Int>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp) // sichtbarer Bereich
-            .offset(y = 40.dp) //nach unten berschieben
+            .offset(y = 40.dp) //nach unten verschieben
     ) {
         Row(
             modifier = Modifier.align(Alignment.TopCenter),
@@ -972,30 +1085,6 @@ fun TicketWithCount(
 }
 
 
-
-
-@Preview(showBackground = true)
-@Composable
-fun MrXTicketPreview() {
-    val allTickets = listOf(
-        "TAXI" to 4,
-        "BUS" to 3,
-        "UNDERGROUND" to 2,
-        "BLACK" to 1,
-        "DOUBLE" to 1
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy((-32).dp)
-    ) {
-        allTickets.forEach { (ticket, count) ->
-            TicketWithCount(ticket = ticket, count = count)
-        }
-    }
-}
 
 
 

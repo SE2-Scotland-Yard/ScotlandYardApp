@@ -32,7 +32,7 @@ class GameViewModel(
 
     var allowedMoves: List<AllowedMoveResponse> by mutableStateOf(emptyList())
 
-    var allowedDoubleMoves: List<MrXDoubleMoveResponse> by mutableStateOf(emptyList())
+    var allowedDoubleMoves: List<AllowedMoveResponse> by mutableStateOf(emptyList())
 
     var errorMessage by mutableStateOf<String?>(null)
         private set
@@ -53,13 +53,26 @@ class GameViewModel(
     }
 
     fun move(gameId: String, name: String, to: Int, gotTicket: String) {
-       viewModelScope.launch {
-           try {
+        viewModelScope.launch {
+            try {
 
-               message = repository.move(gameId, name, to, gotTicket)
-           }catch (e:Exception){
-               errorMessage = e.message
-           }
+                message = repository.move(gameId, name, to, gotTicket)
+            }catch (e:Exception){
+                errorMessage = e.message
+            }
+        }
+    }
+
+    fun doubleMove(gameId: String, name: String, to: Int, gotTicket: String) {
+        viewModelScope.launch {
+            try {
+                // Hier rufen wir die spezielle Double-Move API auf
+
+                message = repository.moveDouble(gameId, name, to, gotTicket)
+
+            } catch (e: Exception) {
+                errorMessage = e.message
+            }
         }
     }
 
@@ -93,7 +106,7 @@ class GameViewModel(
             }
         }
     }
-    fun moveDouble(
+    /*fun moveDouble(
         gameId: String,
         name: String,
         firstTo: Int,
@@ -109,7 +122,7 @@ class GameViewModel(
                 errorMessage = e.message
             }
         }
-    }
+    }*/
 
     fun fetchAllowedDoubleMoves(gameId: String, name: String) {
         viewModelScope.launch {
@@ -128,6 +141,19 @@ class GameViewModel(
     fun decreaseZoom(){
         scale -= 0.1f
     }
+
+    var onZoomChanged: ((Float, Float) -> Unit)? = null
+
+    fun increaseZoom(playerX: Float, playerY: Float) {
+        scale = (scale + 0.1f).coerceIn(0.5f, 3f)
+        onZoomChanged?.invoke(playerX, playerY)
+    }
+
+    fun decreaseZoom(playerX: Float, playerY: Float) {
+        scale = (scale - 0.1f).coerceIn(0.5f, 3f)
+        onZoomChanged?.invoke(playerX, playerY)
+    }
+
 
     fun fetchMrXHistory(gameId: String, onResult: (List<String>) -> Unit) {
         viewModelScope.launch {
