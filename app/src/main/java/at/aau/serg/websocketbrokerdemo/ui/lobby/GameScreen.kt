@@ -360,7 +360,9 @@ fun GameScreen(
                 WinnerOverlay(
                     winner = winner,
                     currentPlayerRole = userSessionVm.role.value,
-                    onDismiss = { navigateToLobby = true  }
+                    onDismiss = { navigateToLobby = true  },
+                    userSessionVm = userSessionVm,
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
                 )
             }
 
@@ -657,7 +659,10 @@ private fun Stations(
                                     username?.let { name ->
                                         when {
                                             gameVm.isBlackMoveMode && gameVm.isDoubleMoveMode -> {
-                                                gameVm.doubleMove(gameId, name, targetStation, "BLACK+BLACK")
+                                                val parts = ticketType.split("+")
+                                                val positionPart = if (parts.size > 2) parts.last() else ""
+                                                val blackTicket = "BLACK+BLACK" + if (positionPart.isNotEmpty()) "+$positionPart" else ""
+                                                gameVm.doubleMove(gameId, name, targetStation, blackTicket)
                                             }
                                             gameVm.isBlackMoveMode -> {
                                                 gameVm.blackMove(gameId, name, targetStation, ticketType)
@@ -811,7 +816,9 @@ private fun PlayerPositions(
 fun WinnerOverlay(
     winner: String?,
     currentPlayerRole: String?,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    userSessionVm: UserSessionViewModel,
+    playerPositions: Map<String, Int>
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
@@ -837,6 +844,13 @@ fun WinnerOverlay(
         !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben dich gefangen!"
         else -> "Glückwunsch! Ihr habt Mr. X gefangen!"
     }
+    val winnerIcons = if (isMrXWinner) {
+        listOf(R.drawable.mrx)
+    } else {
+        playerPositions.keys
+            .filterNot { userSessionVm.isMrX(it) }
+            .map { userSessionVm.getAvatarDrawableRes(it) }
+    }
 
     Box(
         modifier = Modifier
@@ -856,14 +870,34 @@ fun WinnerOverlay(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Icon(
-                painter = painterResource(
-                    id = if (isMrXWinner) R.drawable.mrx else R.drawable.fox
-                ),
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = Color.White
-            )
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 16.dp)
+            ) {
+                if (isMrXWinner) {
+                    // Nur MrX Icon
+                    Image(
+                        painter = painterResource(id = R.drawable.mrx),
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    // Icons aller Detectives
+                    playerPositions.keys
+                        .filterNot { userSessionVm.isMrX(it) }
+                        .forEach { player ->
+                            Image(
+                                painter = painterResource(id = userSessionVm.getAvatarDrawableRes(player)),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .padding(horizontal = 8.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
