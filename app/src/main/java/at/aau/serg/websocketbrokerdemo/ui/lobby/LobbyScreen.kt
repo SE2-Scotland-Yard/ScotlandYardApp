@@ -85,18 +85,7 @@ fun LobbyScreen(
         )
     }
 
-    // Synchronisiere Rolle und Avatar aus dem LobbyState ins lokale UserSessionViewModel
-    LaunchedEffect(lobbyState) {
-        val currentPlayer = userSessionVm.username.value.orEmpty()
 
-        // Rolle setzen
-        userSessionVm.role.value = lobbyState?.selectedRoles?.get(currentPlayer)
-
-        // Avatar zurücksetzen, wenn im Backend nicht mehr vorhanden
-        if (lobbyState?.avatars?.get(currentPlayer) == null) {
-            userSessionVm.avatarResId = null
-        }
-    }
 
     // Synchronisiere Rolle und Avatar aus dem LobbyState ins lokale UserSessionViewModel
     LaunchedEffect(lobbyState) {
@@ -165,6 +154,28 @@ fun LobbyScreen(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+
+        //Avatar unten links
+        if (userSessionVm.avatarResId != null && userSessionVm.role.value != "MRX") {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = userSessionVm.avatarResId!!),
+                    contentDescription = "Dein Avatar",
+                    modifier = Modifier
+                        .size(64.dp)
+                        .border(2.dp, Color.White, CircleShape)
+                        .background(Color.Black.copy(alpha = 0.2f), CircleShape)
+                        .padding(4.dp),
+                    contentScale = ContentScale.Crop
+                )
+
+            }
+        }
     }
 
     Scaffold(
@@ -196,7 +207,11 @@ fun LobbyScreen(
                     }
                 }
             )
+
+
         }
+
+
 
 
     ) { padding ->
@@ -237,6 +252,7 @@ fun LobbyScreen(
                         )
                     }
                 }
+
 
 
                 Column(
@@ -381,8 +397,8 @@ fun LobbyScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .clickable { showAvatarPicker = false },
+                    .background(Color.Black.copy(alpha = 0.7f)),
+
                 contentAlignment = Alignment.Center
             ) {
                 Column(
