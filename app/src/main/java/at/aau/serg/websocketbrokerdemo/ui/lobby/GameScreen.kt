@@ -656,11 +656,13 @@ private fun Stations(
                                 onClick = {
                                     username?.let { name ->
                                         when {
+                                            gameVm.isBlackMoveMode && gameVm.isDoubleMoveMode -> {
+                                                gameVm.doubleMove(gameId, name, targetStation, "BLACK+BLACK")
+                                            }
                                             gameVm.isBlackMoveMode -> {
                                                 gameVm.blackMove(gameId, name, targetStation, ticketType)
                                             }
                                             gameVm.isDoubleMoveMode -> {
-                                                // Hier wird die spezielle Double-Move API aufgerufen
                                                 gameVm.doubleMove(gameId, name, targetStation, ticketType)
                                             }
                                             else -> {
