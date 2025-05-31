@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,8 +51,9 @@ fun PublicLobbiesScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Öffentliche Lobbys",
-                    fontWeight = FontWeight.Bold) },
+                title = {
+                    Text("Öffentliche Lobbys", fontWeight = FontWeight.Bold)
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -59,8 +61,17 @@ fun PublicLobbiesScreen(
                             contentDescription = "Zurück"
                         )
                     }
+                },
+                actions = {
+                    IconButton(onClick = { lobbyViewModel.fetchPublicLobbies() }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Neu laden"
+                        )
+                    }
                 }
             )
+
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
