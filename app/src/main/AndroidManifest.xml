@@ -15,7 +15,6 @@
         android:theme="@style/Theme.MyApplication"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
-
         <activity
             android:name="at.aau.serg.websocketbrokerdemo.MainActivity"
             android:configChanges="orientation|screenSize"
@@ -29,20 +28,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name="at.aau.serg.websocketbrokerdemo.ui.auth.AuthActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name="at.aau.serg.websocketbrokerdemo.ui.lobby.LobbyActivity"
             android:exported="true" />
-
     </application>
 
 </manifest>

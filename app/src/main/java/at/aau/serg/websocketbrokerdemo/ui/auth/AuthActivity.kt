@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import at.aau.serg.websocketbrokerdemo.ui.lobby.LobbyActivity
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 
+
 class AuthActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,7 +28,8 @@ class AuthActivity : ComponentActivity() {
             when (screenState) {
                 AuthScreenState.Start -> AuthStartScreen(
                     onLoginClick = { screenState = AuthScreenState.Login },
-                    onRegisterClick = { screenState = AuthScreenState.Register }
+                    onRegisterClick = { screenState = AuthScreenState.Register },
+                    onRulesClick = { screenState = AuthScreenState.Rules }
                 )
 
                 AuthScreenState.Login -> AuthScreen(
@@ -49,6 +51,10 @@ class AuthActivity : ComponentActivity() {
                     },
                     onBack = { screenState = AuthScreenState.Start }
                 )
+
+                AuthScreenState.Rules -> RuleScreen(
+                    onBack = { screenState = AuthScreenState.Start }
+                )
             }
         }
     }
@@ -67,5 +73,6 @@ class AuthActivity : ComponentActivity() {
 private enum class AuthScreenState {
     Start,
     Login,
-    Register
+    Register,
+    Rules
 }
