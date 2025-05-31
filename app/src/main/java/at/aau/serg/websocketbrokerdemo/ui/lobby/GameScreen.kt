@@ -4,11 +4,19 @@ import GameViewModel
 import android.app.Activity
 import android.graphics.Color.alpha
 import android.util.Log
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
@@ -37,12 +45,14 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -237,6 +247,22 @@ fun GameScreen(
                 gameId = gameId,
                 username = username
             )
+
+            val myTickets = gameUpdate?.ticketInventory?.get(username)
+
+            if (myTickets != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp)
+                ) {
+                    TicketBar(tickets = myTickets)
+                }
+            }
+
+
+
 
 
             //verwendetes Ticket anzeigen
@@ -953,3 +979,121 @@ fun TicketImage(ticket: String) {
         )
     }
 }
+
+
+@Composable
+fun TicketBar(tickets: Map<String, Int>) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp) // sichtbarer Bereich
+            .offset(y = 40.dp) //nach unten verschieben
+    ) {
+        Row(
+            modifier = Modifier.align(Alignment.TopCenter),
+            horizontalArrangement = Arrangement.spacedBy((-20).dp) // Überlappung
+        ) {
+            var z = 0f
+            tickets.entries.sortedBy { it.key }.forEach { (ticket, count) ->
+                TicketWithCount(
+                    ticket = ticket,
+                    count = count,
+                    modifier = Modifier.zIndex(z++)
+                )
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun TicketWithCount(
+    ticket: String,
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    val ticketRes = when (ticket.uppercase()) {
+        "TAXI" -> R.drawable.ticket_taxi
+        "BUS" -> R.drawable.ticket_bus
+        "UNDERGROUND" -> R.drawable.ticket_under
+        "BLACK" -> R.drawable.ticket_black
+        "DOUBLE" -> R.drawable.ticket_double
+        else -> null
+    }
+
+    ticketRes?.let {
+        var previousCount by remember { mutableStateOf(count) }
+        var animateScale by remember { mutableStateOf(false) }
+
+        val scale by animateFloatAsState(
+            targetValue = if (animateScale) 1.2f else 1f,
+            animationSpec = tween(durationMillis = 300),
+            label = "scaleOnTicketChange"
+        )
+
+        // Effekt beim Count-Wechsel triggern
+        LaunchedEffect(count) {
+            if (count != previousCount) {
+                animateScale = true
+                previousCount = count
+                delay(300)
+                animateScale = false
+            }
+        }
+
+        Box(
+            contentAlignment = Alignment.TopEnd,
+            modifier = modifier
+                .size(width = 72.dp, height = 96.dp)
+                .graphicsLayer {
+                    rotationZ = -8f
+                    scaleX = scale
+                    scaleY = scale
+                }
+        ) {
+            Image(
+                painter = painterResource(id = it),
+                contentDescription = ticket,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(x = (-50).dp, y = 15.dp)
+                    .background(Color.Black, shape = CircleShape)
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                AnimatedContent(
+                    targetState = count,
+                    transitionSpec = {
+                        (slideInVertically { -it } + fadeIn() + scaleIn()) togetherWith
+                                (slideOutVertically { it } + fadeOut() + scaleOut())
+                    },
+                    label = "ticketCount"
+                ) { animatedCount ->
+                    Text(
+                        text = animatedCount.toString(),
+                        color = Color.White,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
