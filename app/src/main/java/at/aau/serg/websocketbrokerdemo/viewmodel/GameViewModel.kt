@@ -57,11 +57,13 @@ class GameViewModel(
         isDoubleMoveMode = enabled
     }
 
-    fun move(gameId: String, name: String, to: Int, gotTicket: String) {
+    fun move(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
         viewModelScope.launch {
             try {
 
                 message = repository.move(gameId, name, to, gotTicket)
+                vibrate(context)
+                currentPlayerPosition.value = to
             }catch (e:Exception){
                 errorMessage = e.message
             }
@@ -81,11 +83,12 @@ class GameViewModel(
         }
     }
 
-    fun blackMove(gameId: String, name: String, to: Int, gotTicket: String) {
+    fun blackMove(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
         viewModelScope.launch {
             try {
 
                 message = repository.blackMove(gameId, name, to, gotTicket)
+                vibrate(context)
             }catch (e:Exception){
                 errorMessage = e.message
             }
@@ -185,6 +188,27 @@ class GameViewModel(
             shakeDirection.value = direction
             delay(3000)
             shakeDirection.value = ""
+        }
+    }
+
+    fun calculateDirection(context: Context, currentFieldId: Int, mrXFieldId: Int): String {
+        val coordinates = CoordinateLoader.load(context)
+        val from = coordinates[currentFieldId] ?: return ""
+        val to = coordinates[mrXFieldId] ?: return ""
+
+        val dx = to.x - from.x
+        val dy = to.y - from.y
+
+        return when {
+            dx > 0 && dy < 0 -> "Nordost"
+            dx < 0 && dy < 0 -> "Nordwest"
+            dx > 0 && dy > 0 -> "Südost"
+            dx < 0 && dy > 0 -> "Südwest"
+            dx == 0 && dy < 0 -> "Norden"
+            dx == 0 && dy > 0 -> "Süden"
+            dy == 0 && dx > 0 -> "Osten"
+            dy == 0 && dx < 0 -> "Westen"
+            else -> "Unbekannt"
         }
     }
 
