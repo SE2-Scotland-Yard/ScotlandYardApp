@@ -7,10 +7,14 @@ import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
@@ -71,6 +75,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
+import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -237,7 +242,7 @@ fun GameScreen(
                 .padding(padding)
         ) {
 
-            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition,scrollStateX,scrollStateY)
+            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition,scrollStateX,scrollStateY,gameUpdate)
             BottomBar(
                 gameVm = gameVm,
                 userSessionVm = userSessionVm,
@@ -403,7 +408,8 @@ fun GameScreen(
                     currentPlayerRole = userSessionVm.role.value,
                     onDismiss = { navigateToLobby = true  },
                     userSessionVm = userSessionVm,
-                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
+                    gameUpdate = gameUpdate
                 )
             }
 
@@ -595,7 +601,8 @@ fun Map(
     userSessionVm: UserSessionViewModel,
     mrXPosition: Int?,
     scrollStateX: ScrollState,
-    scrollStateY: ScrollState
+    scrollStateY: ScrollState,
+    gameUpdate: GameUpdate?
 ) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
@@ -627,7 +634,7 @@ fun Map(
                     modifier = Modifier.fillMaxSize()
                 )
                 Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
-                PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition)
+                PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition,gameUpdate)
             }
         }
     }
@@ -758,7 +765,8 @@ private fun PlayerPositions(
     density: Density,
     playerPositions: Map<String, Int>,
     userSessionVm: UserSessionViewModel,
-    mrXPosition: Int?
+    mrXPosition: Int?,
+    gameUpdate: GameUpdate?
 ) {
     val iconSizeDp = (40 * gameVm.scale).dp
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -798,18 +806,50 @@ private fun PlayerPositions(
             val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
             val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
+            val infiniteTransition = rememberInfiniteTransition(label = "pulsing")
+            val isCurrentPlayer = playerName == gameUpdate?.currentPlayer
 
-            Image(
-                painter = painterResource(id = getIconForPlayer(playerName)),
-                contentDescription = "Position von $playerName",
+
+
+
+            // 1. Animation für Skalierung (Pulsieren)
+            val pulse by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = if (playerName == gameUpdate?.currentPlayer) 1.2f else 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                )
+            )
+
+// 2. Glow-Farbe
+            val glowColor = if (playerName == gameUpdate?.currentPlayer) Color.Yellow else Color.Transparent
+
+            Box(
                 modifier = Modifier
-                    .size(iconSizeDp)
                     .offset(
                         x = displayX - iconSizeDp / 2,
                         y = displayY - iconSizeDp / 2
-                    ),
-                contentScale = ContentScale.Fit
-            )
+                    )
+                    .graphicsLayer {
+                        scaleX = pulse
+                        scaleY = pulse
+                        shadowElevation = if (playerName == gameUpdate?.currentPlayer) 12f else 0f
+                        shape = CircleShape
+                        clip = false
+                    }
+                    .background(glowColor.copy(alpha = 0.4f), shape = CircleShape)
+                    .size(iconSizeDp)
+                    .zIndex(1f)
+            ) {
+                Image(
+                    painter = painterResource(id = getIconForPlayer(playerName)),
+                    contentDescription = "Position von $playerName",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
             LaunchedEffect(positionId) {
                 lastPlayerPositions = lastPlayerPositions + (playerName to (xPx.toFloat() to yPx.toFloat()))
             }
@@ -881,7 +921,8 @@ fun WinnerOverlay(
     currentPlayerRole: String?,
     onDismiss: () -> Unit,
     userSessionVm: UserSessionViewModel,
-    playerPositions: Map<String, Int>
+    playerPositions: Map<String, Int>,
+    gameUpdate: GameUpdate?
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
