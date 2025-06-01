@@ -59,5 +59,10 @@ interface GameApi {
     @GET("/api/game/mrXhistory")
     suspend fun getMrXHistory(@Query("gameId") gameId: String): List<String>
 
+    @POST("api/game/cheat")
+    suspend fun shake(
+        @Query("gameId") gameId: String,
+        @Query("name") name: String
+    ): Int
 
 }
