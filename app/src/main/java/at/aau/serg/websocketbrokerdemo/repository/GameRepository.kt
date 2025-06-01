@@ -62,4 +62,8 @@ class GameRepository (
         println("Repository: getMrXHistory wird aufgerufen mit gameId=$gameId")
         return api.getMrXHistory(gameId)
     }
+
+    suspend fun shakeAndGetMrXPosition(gameId: String, name: String): Int {
+        return api.shake(gameId, name)
+    }
 }
