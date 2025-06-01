@@ -2,7 +2,9 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import android.app.Activity
+import android.content.Context
 import android.graphics.Color.alpha
+import android.hardware.SensorManager
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -75,6 +77,11 @@ import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import at.aau.serg.websocketbrokerdemo.functions.ShakeDetector
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 
 
@@ -117,6 +124,8 @@ fun GameScreen(
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val gameVm: GameViewModel = viewModel()
 
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
         if (userSessionVm.role.value == "MRX") {
@@ -229,6 +238,31 @@ fun GameScreen(
         }
     }
 
+    DisposableEffect(Unit) {
+        val shakeDetector = ShakeDetector(context).apply {
+            onShake = {
+                val pos = gameVm.currentPlayerPosition.value
+                if (pos != null && username != null) {
+                    gameVm.onShakeDetected(context, pos, gameId, username)
+                }
+            }
+        }
+
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> shakeDetector.start()
+                Lifecycle.Event.ON_PAUSE -> sensorManager.unregisterListener(shakeDetector)
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            sensorManager.unregisterListener(shakeDetector)
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold { padding ->
         Image(
@@ -722,6 +756,8 @@ private fun Stations(
                             }
                         }
 
+                        val context = LocalContext.current
+
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
                             DropdownMenuItem(
                                 text = { Text("${ticketType.substringBeforeLast("+")} → Station $targetStation")  },
@@ -735,14 +771,14 @@ private fun Stations(
                                                 gameVm.doubleMove(gameId, name, targetStation, blackTicket)
                                             }
                                             gameVm.isBlackMoveMode -> {
-                                                gameVm.blackMove(gameId, name, targetStation, ticketType)
+                                                gameVm.blackMove(gameId, name, targetStation, ticketType, context)
                                             }
                                             gameVm.isDoubleMoveMode -> {
                                                 gameVm.doubleMove(gameId, name, targetStation, ticketType)
                                             }
                                             else -> {
 
-                                                gameVm.move(gameId, name, targetStation, ticketType)
+                                                gameVm.move(gameId, name, targetStation, ticketType, context)
                                             }
                                         }
                                         expandedStates[id] = false
@@ -1285,32 +1321,4 @@ fun TicketAnimatedButton(
         )
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
