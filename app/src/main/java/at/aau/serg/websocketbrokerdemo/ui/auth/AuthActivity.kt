@@ -12,6 +12,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import at.aau.serg.websocketbrokerdemo.ui.lobby.LobbyActivity
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.runtime.SideEffect
+
 
 
 class AuthActivity : ComponentActivity() {
@@ -23,6 +28,15 @@ class AuthActivity : ComponentActivity() {
             val userSessionViewModel: UserSessionViewModel = viewModel()
 
             var screenState by remember { mutableStateOf<AuthScreenState>(AuthScreenState.Start) }
+
+            SideEffect {
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                val controller = WindowInsetsControllerCompat(window, window.decorView)
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+
 
 
             when (screenState) {

@@ -7,8 +7,16 @@ import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -38,6 +46,7 @@ import com.example.myapplication.R
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -54,6 +63,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
@@ -63,6 +73,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.ui.draw.clip
+import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -228,7 +242,7 @@ fun GameScreen(
                 .padding(padding)
         ) {
 
-            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition,scrollStateX,scrollStateY)
+            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition,scrollStateX,scrollStateY,gameUpdate)
             BottomBar(
                 gameVm = gameVm,
                 userSessionVm = userSessionVm,
@@ -276,7 +290,7 @@ fun GameScreen(
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
                         .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 12.dp, vertical = 20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         visibleTicket?.let {
@@ -311,10 +325,16 @@ fun GameScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clickable { showMrXHistory = false }
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            showMrXHistory = false
+                        }
                         .padding(16.dp),
                     contentAlignment = Alignment.CenterEnd
-                ) {
+                )
+                {
                     Box(
                         modifier = Modifier
                             .widthIn(min = 240.dp, max = 320.dp)
@@ -388,7 +408,8 @@ fun GameScreen(
                     currentPlayerRole = userSessionVm.role.value,
                     onDismiss = { navigateToLobby = true  },
                     userSessionVm = userSessionVm,
-                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
+                    gameUpdate = gameUpdate
                 )
             }
 
@@ -401,6 +422,32 @@ fun GameScreen(
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
                 }
             }
+
+            val currentPlayer = gameUpdate?.currentPlayer
+
+            currentPlayer?.let { playerName ->
+                val avatarRes = if (userSessionVm.isMrX(playerName)) R.drawable.mrx
+                else userSessionVm.getAvatarDrawableRes(playerName)
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 16.dp, end = 16.dp)
+                        .size(56.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = avatarRes),
+                        contentDescription = "Aktueller Spieler: $playerName",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
         }
     }
 }
@@ -444,30 +491,26 @@ private fun BoxScope.BottomBar(
     Row(modifier = Modifier.align(Alignment.BottomStart)) {
 
         Spacer(spacermod)
-        // Black Move Mode Button (nur für Mr. X)
         if (userSessionVm.role.value == "MRX") {
-            BlackMoveModeButton(gameVm = gameVm)
-            Spacer(spacermod)
-        }
-
-        // Double Move Button (nur für Mr. X)
-        if (userSessionVm.role.value == "MRX") {
-            SelectableDoubleTicket(
+            ExpandableTicketStackAnimated(
                 gameVm = gameVm,
-                onDoubleMoveSelected = { isDoubleMove ->
-                    if (isDoubleMove) {
-                        username?.let { name ->
-                            gameVm.fetchAllowedDoubleMoves(gameId, name)
-                        }
+                onBlackClick = {
+                    gameVm.isBlackMoveMode = !gameVm.isBlackMoveMode
+                },
+                onDoubleClick = {
+                    gameVm.isDoubleMoveMode = !gameVm.isDoubleMoveMode
+                    val name = username ?: return@ExpandableTicketStackAnimated
+                    if (gameVm.isDoubleMoveMode) {
+                        gameVm.fetchAllowedDoubleMoves(gameId, name)
                     } else {
-                        username?.let { name ->
-                            gameVm.fetchAllowedMoves(gameId, name)
-                        }
+                        gameVm.fetchAllowedMoves(gameId, name)
                     }
                 }
             )
-            Spacer(spacermod)
+
+
         }
+
 
     }
 
@@ -558,7 +601,8 @@ fun Map(
     userSessionVm: UserSessionViewModel,
     mrXPosition: Int?,
     scrollStateX: ScrollState,
-    scrollStateY: ScrollState
+    scrollStateY: ScrollState,
+    gameUpdate: GameUpdate?
 ) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
@@ -590,7 +634,7 @@ fun Map(
                     modifier = Modifier.fillMaxSize()
                 )
                 Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
-                PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition)
+                PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition,gameUpdate)
             }
         }
     }
@@ -721,7 +765,8 @@ private fun PlayerPositions(
     density: Density,
     playerPositions: Map<String, Int>,
     userSessionVm: UserSessionViewModel,
-    mrXPosition: Int?
+    mrXPosition: Int?,
+    gameUpdate: GameUpdate?
 ) {
     val iconSizeDp = (40 * gameVm.scale).dp
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -761,18 +806,50 @@ private fun PlayerPositions(
             val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
             val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
+            val infiniteTransition = rememberInfiniteTransition(label = "pulsing")
+            val isCurrentPlayer = playerName == gameUpdate?.currentPlayer
 
-            Image(
-                painter = painterResource(id = getIconForPlayer(playerName)),
-                contentDescription = "Position von $playerName",
+
+
+
+            // 1. Animation für Skalierung (Pulsieren)
+            val pulse by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = if (playerName == gameUpdate?.currentPlayer) 1.2f else 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                )
+            )
+
+// 2. Glow-Farbe
+            val glowColor = if (playerName == gameUpdate?.currentPlayer) Color.Yellow else Color.Transparent
+
+            Box(
                 modifier = Modifier
-                    .size(iconSizeDp)
                     .offset(
                         x = displayX - iconSizeDp / 2,
                         y = displayY - iconSizeDp / 2
-                    ),
-                contentScale = ContentScale.Fit
-            )
+                    )
+                    .graphicsLayer {
+                        scaleX = pulse
+                        scaleY = pulse
+                        shadowElevation = if (playerName == gameUpdate?.currentPlayer) 12f else 0f
+                        shape = CircleShape
+                        clip = false
+                    }
+                    .background(glowColor.copy(alpha = 0.4f), shape = CircleShape)
+                    .size(iconSizeDp)
+                    .zIndex(1f)
+            ) {
+                Image(
+                    painter = painterResource(id = getIconForPlayer(playerName)),
+                    contentDescription = "Position von $playerName",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
             LaunchedEffect(positionId) {
                 lastPlayerPositions = lastPlayerPositions + (playerName to (xPx.toFloat() to yPx.toFloat()))
             }
@@ -844,7 +921,8 @@ fun WinnerOverlay(
     currentPlayerRole: String?,
     onDismiss: () -> Unit,
     userSessionVm: UserSessionViewModel,
-    playerPositions: Map<String, Int>
+    playerPositions: Map<String, Int>,
+    gameUpdate: GameUpdate?
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
@@ -1083,6 +1161,145 @@ fun TicketWithCount(
         }
     }
 }
+
+
+
+
+
+
+@Composable
+fun ExpandableTicketStackAnimated(
+    gameVm: GameViewModel,
+    onBlackClick: () -> Unit,
+    onDoubleClick: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    /* ---------- TRANSITION ---------- */
+    val transition = updateTransition(expanded, label = "ticket_expand")
+
+    // Position & Rotation
+    val blackX  by transition.animateDp(label = "blackX")  { if (it) 0.dp else (-80).dp }
+    val blackY by transition.animateDp(label = "blackY") { if (it) 0.dp  else   0.dp }
+    val blackRot by transition.animateFloat(label = "blackRot") { if (it) 0f else -15f }
+
+    val doubleX by transition.animateDp(label = "doubleX") { if (it) 100.dp else (-80).dp }
+    val doubleY by transition.animateDp(label = "doubleY") { if (it) 0.dp else (-30).dp }
+    val doubleRot by transition.animateFloat(label = "doubleRot") { if (it) 0f else -15f }
+
+    Box(modifier = Modifier
+        .padding(8.dp)
+        .offset(y = (-12).dp)
+    ) {
+        /* BLACK */
+        TicketAnimatedButton(
+            ticket = "BLACK",
+            offsetX = blackX,
+            offsetY = blackY,
+            rotation = blackRot,
+            selected = gameVm.isBlackMoveMode,
+            onClick = {
+                if (!expanded) expanded = true else onBlackClick()
+            },
+            zIndex = if (expanded) 1f else 2f
+        )
+
+        /* DOUBLE */
+        TicketAnimatedButton(
+            ticket = "DOUBLE",
+            offsetX = doubleX,
+            offsetY = doubleY,
+            rotation = doubleRot,
+            selected = gameVm.isDoubleMoveMode,
+            onClick = {
+                if (!expanded) expanded = true else onDoubleClick()
+            },
+            zIndex = if (expanded) 2f else 1f
+        )
+
+        if (expanded) {
+            IconButton(
+                onClick = {
+                    expanded = false
+                    gameVm.isBlackMoveMode = false
+                    gameVm.isDoubleMoveMode = false},
+
+                modifier = Modifier
+                    .offset(x = 200.dp, y = 10.dp)
+                    .size(32.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color.Transparent
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Einklappen",
+                    tint = Color.Black
+                )
+            }
+        }
+
+
+    }
+}
+
+/* ----------------------------------------------------- */
+
+@Composable
+fun TicketAnimatedButton(
+    ticket: String,
+    offsetX: Dp,
+    offsetY: Dp,
+    rotation: Float,
+    selected: Boolean,
+    onClick: () -> Unit,
+    zIndex: Float
+) {
+    val resId = when (ticket.uppercase()) {
+        "BLACK"  -> R.drawable.ticket_black
+        "DOUBLE" -> R.drawable.ticket_double
+        else -> return
+    }
+
+    Box(
+        modifier = Modifier
+            .offset(x = offsetX, y = offsetY)
+            .zIndex(zIndex)
+            .size(width = 96.dp, height = 48.dp)
+            .graphicsLayer { rotationZ = rotation }
+            .border(
+                width = if (selected) 3.dp else 0.dp,
+                color = if (selected) Color.Blue else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onClick() }
+    ) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = ticket,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
