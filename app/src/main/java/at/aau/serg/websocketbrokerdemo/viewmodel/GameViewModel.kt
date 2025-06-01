@@ -212,4 +212,15 @@ class GameViewModel(
         }
     }
 
+    private fun vibrate(context: Context, durationMs: Long = 100) {
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        vibrator?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                it.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                it.vibrate(durationMs)
+            }
+        }
+    }
 }
