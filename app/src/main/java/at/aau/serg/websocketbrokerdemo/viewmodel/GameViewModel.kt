@@ -1,18 +1,22 @@
 
 import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
+import at.aau.serg.websocketbrokerdemo.functions.CoordinateLoader
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-
 
 
 class GameViewModel(
@@ -23,6 +27,9 @@ class GameViewModel(
     var message by mutableStateOf("")
         private set
 
+    val shakeDirection = MutableLiveData<String>()
+
+    val currentPlayerPosition = MutableLiveData<Int>()
 
     var mrXPosition :Int? by mutableStateOf(null)
 
@@ -167,6 +174,18 @@ class GameViewModel(
     fun resetMoveModes() {
         isBlackMoveMode = false
         isDoubleMoveMode = false
+    }
+
+    fun onShakeDetected(context: Context, currentField: Int, gameId: String, name: String) {
+        viewModelScope.launch {
+            val mrXField = repository.shakeAndGetMrXPosition(gameId, name)
+            if (mrXField == -1) return@launch
+
+            val direction = calculateDirection(context, currentField, mrXField)
+            shakeDirection.value = direction
+            delay(3000)
+            shakeDirection.value = ""
+        }
     }
 
 }
