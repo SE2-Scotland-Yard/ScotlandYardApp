@@ -70,6 +70,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.ui.draw.clip
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -284,7 +285,7 @@ fun GameScreen(
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
                         .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 12.dp, vertical = 20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         visibleTicket?.let {
@@ -415,6 +416,32 @@ fun GameScreen(
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
                 }
             }
+
+            val currentPlayer = gameUpdate?.currentPlayer
+
+            currentPlayer?.let { playerName ->
+                val avatarRes = if (userSessionVm.isMrX(playerName)) R.drawable.mrx
+                else userSessionVm.getAvatarDrawableRes(playerName)
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 16.dp, end = 16.dp)
+                        .size(56.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = avatarRes),
+                        contentDescription = "Aktueller Spieler: $playerName",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
         }
     }
 }
