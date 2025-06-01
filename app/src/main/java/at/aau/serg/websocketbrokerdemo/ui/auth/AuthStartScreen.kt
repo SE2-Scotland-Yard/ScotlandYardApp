@@ -17,10 +17,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.R
 
+
 @Composable
 fun AuthStartScreen(
     onLoginClick: () -> Unit,
-    onRegisterClick: () -> Unit
+    onRegisterClick: () -> Unit,
+    onRulesClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -33,6 +35,22 @@ fun AuthStartScreen(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+
+        IconButton(
+            onClick = onRulesClick,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp)
+                .size(80.dp)
+
+        ){
+            Icon(
+                painter = painterResource(id = R.drawable.rulebutton),
+                contentDescription = "Regeln",
+                modifier = Modifier.size(80.dp),
+                tint = Color.Unspecified
+            )
+        }
 
         Column(
             modifier = Modifier
