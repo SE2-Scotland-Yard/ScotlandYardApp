@@ -159,6 +159,9 @@ fun GameScreen(
 
             isScrollingToMrX = false
         }
+        gameVm.fetchMrXHistory(gameId) { history ->
+            mrXHistory = history
+        }
 
     }
 
@@ -458,6 +461,12 @@ fun GameScreen(
             ){
                 Column {
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
+
+                    val currentRound = mrXHistory.lastOrNull()?.substringBefore(":") ?: "Runde 1"
+
+                    Text(modifier = Modifier.padding(8.dp),
+                        text = "$currentRound",
+                        color = Color.White)
                 }
             }
 
