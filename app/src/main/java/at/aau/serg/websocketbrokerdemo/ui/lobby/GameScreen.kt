@@ -75,6 +75,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 
 
@@ -260,6 +261,13 @@ fun GameScreen(
                 playerPos = playerPos,
                 gameId = gameId,
                 username = username
+            )
+
+            MrXPositionOverlay(
+                gameVm = gameVm,
+                playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
+                userSessionVm = userSessionVm,
+                gameUpdate = gameUpdate
             )
 
             val myTickets = gameUpdate?.ticketInventory?.get(username)
@@ -1287,30 +1295,77 @@ fun TicketAnimatedButton(
 }
 
 
+@Composable
+private fun BoxScope.MrXPositionOverlay(
+    gameVm: GameViewModel,
+    playerPositions: Map<String, Int>,
+    userSessionVm: UserSessionViewModel,
+    gameUpdate: GameUpdate?
+) {
+    val mrXName = userSessionVm.getMrXName()
+    var currentMrXPosition by remember { mutableStateOf<Int?>(null) }
+    var showMrXPosition by remember { mutableStateOf(false) }
+    var lastDisplayedPosition by remember { mutableStateOf<Int?>(null) }
 
+    // Aktuelle Mr. X-Position aus den Spielerdaten
+    val newMrXPosition = playerPositions[mrXName]
 
+    // Effekt, der auf Positionsänderungen reagiert
+    LaunchedEffect(newMrXPosition) {
+        if (newMrXPosition != null && newMrXPosition != -1 && newMrXPosition != lastDisplayedPosition) {
+            currentMrXPosition = newMrXPosition
+            showMrXPosition = true
+            lastDisplayedPosition = newMrXPosition
 
+            // Nach 2 Sekunden ausblenden
+            delay(2000L)
+            showMrXPosition = false
+        }
+    }
 
+    // Animation für Pulsieren
+    val infiniteTransition = rememberInfiniteTransition()
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
 
+    AnimatedVisibility(
+        visible = showMrXPosition,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
+        modifier = Modifier.align(Alignment.Center)
+    ) {
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = pulse
+                    scaleY = pulse
+                }
+                .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.mrx),
+                    contentDescription = "Mr. X",
+                    modifier = Modifier.size(32.dp)
+                )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                Text(
+                    text = "Mr. X ist an Station $currentMrXPosition aufgetaucht!",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
