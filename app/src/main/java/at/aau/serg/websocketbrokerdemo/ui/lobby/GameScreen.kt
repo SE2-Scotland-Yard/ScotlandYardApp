@@ -2,15 +2,12 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import android.app.Activity
-import android.graphics.Color.alpha
-import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -24,7 +21,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
@@ -39,46 +35,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
-import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.absoluteValue
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     gameId: String,
@@ -117,17 +103,69 @@ fun GameScreen(
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
+    var isScrollingToMrX by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    var lastMrXPosition by remember { mutableStateOf<Int?>(null) }
+    var lastMyPosition by remember { mutableStateOf<Int?>(null) }
+
 
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
         if (userSessionVm.role.value == "MRX") {
-            // For Mr. X, prioritize the dedicated mrXPosition if available
+
             val position = mrXPosition ?: gameUpdate?.playerPositions?.get(userSessionVm.getMrXName())
             position?.let { gameVm.pointPositions[it] }
         } else {
-            // For detectives, use their position from playerPositions
+
             gameUpdate?.playerPositions?.get(username)?.let { gameVm.pointPositions[it] }
         }
     }
+
+    fun scrollToPosition(positionId: Int, scope: CoroutineScope) {
+        val point = gameVm.pointPositions[positionId]
+        point?.let { (x, y) ->
+            val targetX = (x * gameVm.scale).toInt() - (screenWidth / 2)
+            val targetY = (y * gameVm.scale).toInt() - (screenHeight / 2)
+
+            scope.launch {
+                scrollStateX.animateScrollTo(targetX, animationSpec = tween(durationMillis = 1500))
+            }
+
+            scope.launch {
+                scrollStateY.animateScrollTo(targetY, animationSpec = tween(durationMillis = 1500))
+            }
+        }
+
+    }
+
+    LaunchedEffect(gameUpdate?.playerPositions) {
+        val mrXName = userSessionVm.getMrXName()
+        val currentMrXPosition = gameUpdate?.playerPositions?.get(mrXName)
+        val currentMyPosition = gameUpdate?.playerPositions?.get(username)
+
+        val mrXPositionChanged = currentMrXPosition != null && currentMrXPosition != -1 && currentMrXPosition != lastMrXPosition
+
+
+        if (mrXPositionChanged && !isScrollingToMrX && currentMyPosition != null) {
+            isScrollingToMrX = true
+
+            scrollToPosition(currentMrXPosition!!, coroutineScope)
+            lastMrXPosition = currentMrXPosition
+
+            delay(3000)
+
+
+            scrollToPosition(currentMyPosition, coroutineScope)
+            lastMyPosition = currentMyPosition
+
+            isScrollingToMrX = false
+        }
+        gameVm.fetchMrXHistory(gameId) { history ->
+            mrXHistory = history
+        }
+
+    }
+
+
 
     LaunchedEffect(myPosition, mrXPosition, gameVm.scale) {
 
@@ -136,13 +174,13 @@ fun GameScreen(
                 if (userSessionVm.role.value == "MRX") mrXPosition ?: myPosition else myPosition
 
             if (positionToFocus != null) {
-                // Leicht reinzoomen (z.B. auf 1.2f)
+
                 gameVm.scale = 1.2f.coerceIn(0.5f, 3f)
 
-                // Verzögerung für die Animation
+
                 delay(100)
 
-                // Zur eigenen Position scrollen (zentriert)
+
                 val point = gameVm.pointPositions[positionToFocus]
                 point?.let { (x, y) ->
                     val targetX = (x * gameVm.scale).toInt() - (screenWidth / 2)
@@ -170,7 +208,6 @@ fun GameScreen(
             gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
                 gameVm.fetchAllowedDoubleMoves(gameId, username)
-                //zuerst auf false, MrX setzt selber
                 gameVm.updateDoubleMoveMode(false)
             }
         }
@@ -260,6 +297,11 @@ fun GameScreen(
                 playerPos = playerPos,
                 gameId = gameId,
                 username = username
+            )
+
+            MrXPositionOverlay(
+                playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
+                userSessionVm = userSessionVm
             )
 
             val myTickets = gameUpdate?.ticketInventory?.get(username)
@@ -408,8 +450,7 @@ fun GameScreen(
                     currentPlayerRole = userSessionVm.role.value,
                     onDismiss = { navigateToLobby = true  },
                     userSessionVm = userSessionVm,
-                    playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
-                    gameUpdate = gameUpdate
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
                 )
             }
 
@@ -420,6 +461,12 @@ fun GameScreen(
             ){
                 Column {
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
+
+                    val currentRound = mrXHistory.lastOrNull()?.substringBefore(":") ?: "Runde 1"
+
+                    Text(modifier = Modifier.padding(8.dp),
+                        text = "$currentRound",
+                        color = Color.White)
                 }
             }
 
@@ -471,7 +518,7 @@ private fun BoxScope.BottomBar(
 
     fun adjustZoom(newScale: Float) {
         playerPos?.let { (x, y) ->
-            val oldScale = gameVm.scale
+
             gameVm.scale = newScale.coerceIn(0.5f, 3f)
 
             // Scroll-Position berechnen und anpassen
@@ -541,51 +588,6 @@ private fun BoxScope.BottomBar(
             Text(if (showMrXHistory) "Schließen" else "MrX Verlauf")
         }
 
-    }
-}
-
-@Composable
-fun BlackMoveModeButton(gameVm: GameViewModel) {
-    Box(
-        modifier = Modifier
-            .padding(8.dp)
-            .border(
-                width = if (gameVm.isBlackMoveMode) 3.dp else 0.dp,
-                color = if (gameVm.isBlackMoveMode) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable { gameVm.isBlackMoveMode = !gameVm.isBlackMoveMode }
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ticket_black),
-            contentDescription = "Black Move Mode"
-        )
-    }
-}
-
-@Composable
-fun SelectableDoubleTicket(
-    gameVm: GameViewModel,
-    onDoubleMoveSelected: (Boolean) -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .padding(8.dp)
-            .border(
-                width = if (gameVm.isDoubleMoveMode) 3.dp else 0.dp,
-                color = if (gameVm.isDoubleMoveMode) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable {
-                val newState = !gameVm.isDoubleMoveMode
-                gameVm.isDoubleMoveMode = newState
-                onDoubleMoveSelected(newState)
-            }
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ticket_double),
-            contentDescription = null,
-        )
     }
 }
 
@@ -807,10 +809,6 @@ private fun PlayerPositions(
             val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
             val infiniteTransition = rememberInfiniteTransition(label = "pulsing")
-            val isCurrentPlayer = playerName == gameUpdate?.currentPlayer
-
-
-
 
             // 1. Animation für Skalierung (Pulsieren)
             val pulse by infiniteTransition.animateFloat(
@@ -822,7 +820,7 @@ private fun PlayerPositions(
                 )
             )
 
-// 2. Glow-Farbe
+            // 2. Glow-Farbe
             val glowColor = if (playerName == gameUpdate?.currentPlayer) Color.Yellow else Color.Transparent
 
             Box(
@@ -921,8 +919,7 @@ fun WinnerOverlay(
     currentPlayerRole: String?,
     onDismiss: () -> Unit,
     userSessionVm: UserSessionViewModel,
-    playerPositions: Map<String, Int>,
-    gameUpdate: GameUpdate?
+    playerPositions: Map<String, Int>
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
@@ -947,13 +944,6 @@ fun WinnerOverlay(
         isMrXWinner && !isCurrentPlayerMrX -> "Mr. X ist entkommen! Versucht es beim nächsten Mal besser!"
         !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben dich gefangen!"
         else -> "Glückwunsch! Ihr habt Mr. X gefangen!"
-    }
-    val winnerIcons = if (isMrXWinner) {
-        listOf(R.drawable.mrx)
-    } else {
-        playerPositions.keys
-            .filterNot { userSessionVm.isMrX(it) }
-            .map { userSessionVm.getAvatarDrawableRes(it) }
     }
 
     Box(
@@ -1287,30 +1277,75 @@ fun TicketAnimatedButton(
 }
 
 
+@Composable
+private fun BoxScope.MrXPositionOverlay(
+    playerPositions: Map<String, Int>,
+    userSessionVm: UserSessionViewModel
+) {
+    val mrXName = userSessionVm.getMrXName()
+    var currentMrXPosition by remember { mutableStateOf<Int?>(null) }
+    var showMrXPosition by remember { mutableStateOf(false) }
+    var lastDisplayedPosition by remember { mutableStateOf<Int?>(null) }
 
 
+    val newMrXPosition = playerPositions[mrXName]
 
 
+    LaunchedEffect(newMrXPosition) {
+        if (newMrXPosition != null && newMrXPosition != -1 && newMrXPosition != lastDisplayedPosition) {
+            currentMrXPosition = newMrXPosition
+            showMrXPosition = true
+            lastDisplayedPosition = newMrXPosition
 
 
+            delay(2000L)
+            showMrXPosition = false
+        }
+    }
 
 
+    val infiniteTransition = rememberInfiniteTransition()
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
 
+    AnimatedVisibility(
+        visible = showMrXPosition,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
+        modifier = Modifier.align(Alignment.Center)
+    ) {
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = pulse
+                    scaleY = pulse
+                }
+                .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.mrx),
+                    contentDescription = "Mr. X",
+                    modifier = Modifier.size(32.dp)
+                )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                Text(
+                    text = "Mr. X ist an Station $currentMrXPosition aufgetaucht!",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
