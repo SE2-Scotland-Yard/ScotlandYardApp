@@ -1,7 +1,6 @@
 import at.aau.serg.websocketbrokerdemo.data.api.LobbyApi
 import at.aau.serg.websocketbrokerdemo.data.model.JoinResponse
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
-import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -12,26 +11,39 @@ class LobbyRepository(
         .build()
         .create(LobbyApi::class.java)
 ) {
-    suspend fun createLobby(isPublic: Boolean,name: String): LobbyState {
-        return api.createLobby(isPublic,name)
+    suspend fun createLobby(isPublic: Boolean, name: String): LobbyState? {
+        return try {
+            api.createLobby(isPublic, name)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
-    suspend fun joinLobby(gameId: String, playerName: String): JoinResponse {
-        return api.joinLobby(gameId, playerName)
-    }
-
-
-
-    suspend fun leaveLobby(gameId: String, name: String): String {
-        return api.leaveLobby(gameId, name)
+    suspend fun joinLobby(gameId: String, playerName: String): JoinResponse? {
+        return try {
+            api.joinLobby(gameId, playerName)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     suspend fun getPublicLobbies(): List<LobbyState> {
-        return api.getPublicLobbies()
+        return try {
+            api.getPublicLobbies()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 
-    suspend fun getLobbyStatus(gameId: String): LobbyState {
-        return api.getLobbyStatus(gameId)
+    suspend fun getLobbyStatus(gameId: String): LobbyState? {
+        return try {
+            api.getLobbyStatus(gameId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
-
 }

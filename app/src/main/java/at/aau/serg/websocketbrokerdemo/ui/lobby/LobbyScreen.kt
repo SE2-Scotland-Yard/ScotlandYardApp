@@ -76,10 +76,17 @@ fun LobbyScreen(
         lobbyVm.fetchLobbyStatus(gameId)
         lobbyVm.connectToLobby(
             gameId,
+            context = context,
             onConnected = {
                 if (!toastShown) {
                     Toast.makeText(context, "WebSocket verbunden", Toast.LENGTH_SHORT).show()
                     toastShown = true
+                }
+
+                // Sofort ein Ping senden nach dem Verbinden
+                val player = userSessionVm.username.value
+                if (!player.isNullOrBlank()) {
+                    lobbyVm.sendPingToLobby(gameId, player)
                 }
             }
         )
@@ -138,7 +145,7 @@ fun LobbyScreen(
         while (true) {
             delay(30_000) // alle 30 Sekunden
             val player = userSessionVm.username.value ?: continue
-            lobbyVm.sendPing(gameId, player)
+            lobbyVm.sendPingToLobby(gameId, player)
         }
     }
 

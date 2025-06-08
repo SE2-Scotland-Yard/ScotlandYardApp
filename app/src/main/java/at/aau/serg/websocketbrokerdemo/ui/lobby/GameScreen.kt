@@ -2,6 +2,8 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import android.app.Activity
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -60,6 +62,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
@@ -107,6 +110,8 @@ fun GameScreen(
     val coroutineScope = rememberCoroutineScope()
     var lastMrXPosition by remember { mutableStateOf<Int?>(null) }
     var lastMyPosition by remember { mutableStateOf<Int?>(null) }
+    var showLeaveDialog by remember { mutableStateOf(false) }
+    var showMrXSurrenderedOverlay by remember { mutableStateOf(false) }
 
 
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
@@ -255,9 +260,7 @@ fun GameScreen(
                 gameVm.resetMoveModes()
             }
         }
-    }
-    //Verwendetes Ticket für 2 Sek einblenden
-    LaunchedEffect(gameUpdate) {
+
         val ticket = gameUpdate?.lastTicketUsed
         if (!ticket.isNullOrBlank()) {
             visibleTicket = ticket
@@ -265,6 +268,28 @@ fun GameScreen(
             visibleTicket = ""
         }
     }
+
+
+    LaunchedEffect(Unit) {
+        lobbyVm.setSystemMessageHandler { message ->
+            Log.d("SYSTEM_HANDLER", "Got system message: '$message'")
+            if (message == "mrX") {
+                showMrXSurrenderedOverlay = true
+            } else {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000) // alle 30 Sekunden
+            val player = userSessionVm.username.value ?: continue
+            lobbyVm.sendPingToGame(gameId, player)
+        }
+    }
+
 
 
     Scaffold { padding ->
@@ -454,6 +479,16 @@ fun GameScreen(
                 )
             }
 
+            if (showMrXSurrenderedOverlay) {
+                MrXSurrenderedOverlay(
+                    onDismiss = {
+                        showMrXSurrenderedOverlay = false
+                        navigateToLobby = true
+                    }
+                )
+            }
+
+
             Box(modifier = Modifier
                 .padding(2.dp)
                 .align(Alignment.TopStart)
@@ -483,6 +518,8 @@ fun GameScreen(
                         .size(56.dp)
                         .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
                     contentAlignment = Alignment.Center
+
+
                 ) {
                     Image(
                         painter = painterResource(id = avatarRes),
@@ -493,6 +530,34 @@ fun GameScreen(
                         contentScale = ContentScale.Crop
                     )
                 }
+            }
+            IconButton(
+                onClick = {
+                    val player = userSessionVm.username.value
+
+                    if (player != null) {
+                        gameVm.leaveGame(gameId, player) {
+                            Log.d("STOMP", "Leave im GameScreen – verzögere Navigation")
+
+
+                            CoroutineScope(Dispatchers.Main).launch {
+                                delay(300) // gibt WebSocket etwas Zeit
+                                navigateToLobby = true
+                            }
+                        }
+                    } else {
+                        navigateToLobby = true
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 80.dp, end = 16.dp)
+                    .size(48.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_settings),
+                    contentDescription = "Einstellungen",
+                )
             }
 
         }

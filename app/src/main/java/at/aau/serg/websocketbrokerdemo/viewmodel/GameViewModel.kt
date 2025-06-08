@@ -1,5 +1,6 @@
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -10,9 +11,11 @@ import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
+import at.aau.serg.websocketbrokerdemo.websocket.StompManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-
+import kotlinx.coroutines.withContext
 
 
 class GameViewModel(
@@ -45,6 +48,8 @@ class GameViewModel(
 
     var isDoubleMoveMode by mutableStateOf(false)
     var isBlackMoveMode by mutableStateOf(false)
+
+    private val stompManager = StompManager()
 
     fun updateDoubleMoveMode(enabled: Boolean) {
         isDoubleMoveMode = enabled
@@ -167,6 +172,20 @@ class GameViewModel(
     fun resetMoveModes() {
         isBlackMoveMode = false
         isDoubleMoveMode = false
+    }
+
+    fun leaveGame(gameId: String, playerId: String, onLeft: () -> Unit) {
+        viewModelScope.launch {
+            val success = repository.leaveGame(gameId, playerId)
+            if (success) {
+                stompManager.disconnect()
+                withContext(Dispatchers.Main) {
+                    onLeft()
+                }
+            } else {
+                Log.e("LEAVE", "Spiel verlassen fehlgeschlagen")
+            }
+        }
     }
 
 }

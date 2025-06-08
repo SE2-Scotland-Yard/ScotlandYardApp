@@ -72,7 +72,7 @@ class LobbyActivity : ComponentActivity() {
                         onJoin = { id ->
                             val username = userSessionVm.username.value.orEmpty()
                             coroutineScope.launch {
-                                val result = lobbyVm.tryJoinLobby(id, username)
+                                val result = lobbyVm.tryJoinLobby(id, username, this@LobbyActivity)
                                 if (result.isNotBlank()) {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live
@@ -98,7 +98,7 @@ class LobbyActivity : ComponentActivity() {
                         onSelect = { id ->
                             val username = userSessionVm.username.value.orEmpty()
                             coroutineScope.launch {
-                                val result = lobbyVm.tryJoinLobby(id, username)
+                                val result = lobbyVm.tryJoinLobby(id, username, this@LobbyActivity)
                                 if (result.isNotBlank()) {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live

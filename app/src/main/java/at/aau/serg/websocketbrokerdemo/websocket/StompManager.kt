@@ -1,6 +1,8 @@
 package at.aau.serg.websocketbrokerdemo.websocket
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import com.google.gson.Gson
@@ -33,9 +35,12 @@ class StompManager {
 
     fun connectToAllTopics(
         gameId: String,
+        context: Context,
         onConnected: () -> Unit = {},
         onLobbyUpdate: (LobbyState) -> Unit = {},
-        onErrorMessage: (String) -> Unit = {}
+        onErrorMessage: (String) -> Unit = {},
+        onSystemMessage: (String) -> Unit = {}
+
     ) {
         sessionJob = CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -65,6 +70,20 @@ class StompManager {
                     }
                 }
 
+                // SYSTEM-Nachrichten
+                launch {
+                    Log.d("STOMP", "Subscribing to /topic/game/$gameId/system")
+                    stompSession?.subscribeText("/topic/game/$gameId/system")?.collect { message ->
+                        Log.d("STOMP", "System-Message: $message")
+                        withContext(Dispatchers.Main) {
+                            onSystemMessage(message)
+                            systemMessageHandler?.invoke(message)
+                        }
+                    }
+                }
+
+
+
                 // ERROR messages
                 launch {
                     Log.d("STOMP", "Subscribing to /topic/lobby/$gameId/error")
@@ -84,6 +103,7 @@ class StompManager {
         }
     }
 
+    var systemMessageHandler: ((String) -> Unit)? = null
 
 
 
@@ -132,6 +152,7 @@ class StompManager {
         val payload = mapOf("gameId" to gameId, "playerId" to playerId)
         CoroutineScope(Dispatchers.IO).launch {
             try {
+
                 val json = Gson().toJson(payload)
                 stompSession?.sendText("/app/lobby/leave", json)
                 Log.d("STOMP", "Leave request sent: $json")
@@ -141,21 +162,33 @@ class StompManager {
         }
     }
     //aktivität senden
-    fun sendPing(gameId: String, playerId: String) {
+    fun sendLobbyPing(gameId: String, playerId: String) {
+        sendPingInternal("/app/lobby/ping", gameId, playerId)
+    }
+
+    fun sendGamePing(gameId: String, playerId: String) {
+        sendPingInternal("/app/game/ping", gameId, playerId)
+    }
+
+    private fun sendPingInternal(destination: String, gameId: String, playerId: String) {
         val payload = mapOf("gameId" to gameId, "playerId" to playerId)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val json = Gson().toJson(payload)
-                stompSession?.sendText("/app/lobby/ping", json)
-                Log.d("STOMP", "Ping sent: $json")
+                stompSession?.sendText(destination, json)
+                Log.d("STOMP", "Ping sent to $destination: $json")
             } catch (e: Exception) {
-                Log.e("STOMP", "Error sending ping: ${e.message}", e)
+                Log.e("STOMP", "Error sending ping to $destination: ${e.message}", e)
             }
         }
     }
 
 
+    suspend fun sendLeaveGame(gameId: String, playerId: String) {
+        val json = Gson().toJson(mapOf("gameId" to gameId, "playerId" to playerId))
 
+        stompSession?.sendText("/app/game/leave", json)
+    }
 
 
     fun disconnect() {
