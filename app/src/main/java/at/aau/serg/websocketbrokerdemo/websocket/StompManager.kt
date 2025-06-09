@@ -2,14 +2,12 @@ package at.aau.serg.websocketbrokerdemo.websocket
 
 import android.content.Context
 import android.util.Log
-import android.widget.Toast
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import com.google.gson.Gson
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import org.hildan.krossbow.stomp.StompClient
 import org.hildan.krossbow.stomp.StompSession
 import org.hildan.krossbow.stomp.sendText
@@ -40,18 +38,19 @@ class StompManager {
         onLobbyUpdate: (LobbyState) -> Unit = {},
         onErrorMessage: (String) -> Unit = {},
         onSystemMessage: (String) -> Unit = {}
-
     ) {
-        sessionJob = CoroutineScope(Dispatchers.IO).launch {
+        val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+            Log.e("STOMP", "Unhandled coroutine exception: ${throwable.message}", throwable)
+        }
+
+        sessionJob = CoroutineScope(Dispatchers.IO + exceptionHandler).launch {
             try {
                 stompSession = client.connect(WS_URL)
                 Log.d("STOMP", "WebSocket connected to $WS_URL")
 
                 withContext(Dispatchers.Main) { onConnected() }
 
-                // LOBBY updates
                 launch {
-                    Log.d("STOMP", "Subscribing to /topic/lobby/$gameId")
                     stompSession?.subscribeText("/topic/lobby/$gameId")?.collect { message ->
                         Log.d("STOMP", "Lobby-Message: $message")
                         val lobby = Gson().fromJson(message, LobbyState::class.java)
@@ -60,9 +59,7 @@ class StompManager {
                     }
                 }
 
-                // GAME updates
                 launch {
-                    Log.d("STOMP", "Subscribing to /topic/game/$gameId")
                     stompSession?.subscribeText("/topic/game/$gameId")?.collect { message ->
                         Log.d("STOMP", "Game-Message: $message")
                         val update = Gson().fromJson(message, GameUpdate::class.java)
@@ -70,9 +67,7 @@ class StompManager {
                     }
                 }
 
-                // SYSTEM-Nachrichten
                 launch {
-                    Log.d("STOMP", "Subscribing to /topic/game/$gameId/system")
                     stompSession?.subscribeText("/topic/game/$gameId/system")?.collect { message ->
                         Log.d("STOMP", "System-Message: $message")
                         withContext(Dispatchers.Main) {
@@ -82,11 +77,7 @@ class StompManager {
                     }
                 }
 
-
-
-                // ERROR messages
                 launch {
-                    Log.d("STOMP", "Subscribing to /topic/lobby/$gameId/error")
                     stompSession?.subscribeText("/topic/lobby/$gameId/error")?.collect { message ->
                         Log.d("STOMP", "Error-Message: $message")
                         val json = JSONObject(message)
@@ -103,65 +94,51 @@ class StompManager {
         }
     }
 
+
     var systemMessageHandler: ((String) -> Unit)? = null
 
-
-
+    private suspend fun safeSendText(destination: String, payload: String) {
+        try {
+            val session = stompSession
+            if (session == null) {
+                Log.w("STOMP", "No active session. Cannot send to $destination")
+                return
+            }
+            session.sendText(destination, payload)
+            Log.d("STOMP", "Sent to $destination: $payload")
+        } catch (e: Exception) {
+            Log.e("STOMP", "Failed to send to $destination: ${e.message}", e)
+        }
+    }
 
     fun sendReady(gameId: String, playerName: String) {
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val payload = Gson().toJson(
-                    mapOf("gameId" to gameId, "playerId" to playerName)
-                )
-                stompSession?.sendText("/app/lobby/ready", payload)
-                Log.d("STOMP", "Sent ready: $payload")
-            } catch (e: Exception) {
-                Log.e("STOMP", "Sending failed: ${e.message}", e)
-            }
+            val payload = Gson().toJson(mapOf("gameId" to gameId, "playerId" to playerName))
+            safeSendText("/app/lobby/ready", payload)
         }
     }
 
     fun sendSelectedRole(gameId: String, player: String, role: String) {
-        val payload = Gson().toJson(
-            mapOf("gameId" to gameId, "playerId" to player, "role" to role)
-        )
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                stompSession?.sendText("/app/lobby/role", payload)
-            } catch (e: Exception) {
-                Log.e("STOMP", "Role selection failed: ${e.message}", e)
-            }
+            val payload = Gson().toJson(mapOf("gameId" to gameId, "playerId" to player, "role" to role))
+            safeSendText("/app/lobby/role", payload)
         }
     }
 
     fun sendSelectedAvatar(gameId: String, player: String, avatarResId: Int) {
-        val payload = Gson().toJson(
-            mapOf("gameId" to gameId, "playerId" to player, "avatarResId" to avatarResId)
-        )
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                stompSession?.sendText("/app/lobby/avatar", payload)
-            } catch (e: Exception) {
-                Log.e("STOMP", "Avatar selection failed: ${e.message}", e)
-            }
+            val payload = Gson().toJson(mapOf("gameId" to gameId, "playerId" to player, "avatarResId" to avatarResId))
+            safeSendText("/app/lobby/avatar", payload)
         }
     }
 
     fun sendLeaveLobby(gameId: String, playerId: String) {
-        val payload = mapOf("gameId" to gameId, "playerId" to playerId)
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-
-                val json = Gson().toJson(payload)
-                stompSession?.sendText("/app/lobby/leave", json)
-                Log.d("STOMP", "Leave request sent: $json")
-            } catch (e: Exception) {
-                Log.e("STOMP", "Error sending leave request: ${e.message}", e)
-            }
+            val payload = Gson().toJson(mapOf("gameId" to gameId, "playerId" to playerId))
+            safeSendText("/app/lobby/leave", payload)
         }
     }
-    //aktivität senden
+
     fun sendLobbyPing(gameId: String, playerId: String) {
         sendPingInternal("/app/lobby/ping", gameId, playerId)
     }
@@ -171,23 +148,26 @@ class StompManager {
     }
 
     private fun sendPingInternal(destination: String, gameId: String, playerId: String) {
-        val payload = mapOf("gameId" to gameId, "playerId" to playerId)
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val json = Gson().toJson(payload)
-                stompSession?.sendText(destination, json)
-                Log.d("STOMP", "Ping sent to $destination: $json")
-            } catch (e: Exception) {
-                Log.e("STOMP", "Error sending ping to $destination: ${e.message}", e)
-            }
+            val payload = Gson().toJson(mapOf("gameId" to gameId, "playerId" to playerId))
+            safeSendText(destination, payload)
         }
     }
 
 
-    suspend fun sendLeaveGame(gameId: String, playerId: String) {
-        val json = Gson().toJson(mapOf("gameId" to gameId, "playerId" to playerId))
 
-        stompSession?.sendText("/app/game/leave", json)
+    fun sendAddBot(gameId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val payload = Gson().toJson(mapOf("gameId" to gameId))
+            safeSendText("/app/lobby/add-bot", payload)
+        }
+    }
+
+    fun sendRemoveBot(gameId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val payload = Gson().toJson(mapOf("gameId" to gameId))
+            safeSendText("/app/lobby/remove-bot", payload)
+        }
     }
 
 
@@ -197,5 +177,4 @@ class StompManager {
         stompSession = null
         Log.d("STOMP", "Disconnected")
     }
-
 }

@@ -62,7 +62,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
@@ -112,6 +111,8 @@ fun GameScreen(
     var lastMyPosition by remember { mutableStateOf<Int?>(null) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showMrXSurrenderedOverlay by remember { mutableStateOf(false) }
+    var showSettingsMenu by remember { mutableStateOf(false) }
+
 
 
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
@@ -142,33 +143,8 @@ fun GameScreen(
 
     }
 
-    LaunchedEffect(gameUpdate?.playerPositions) {
-        val mrXName = userSessionVm.getMrXName()
-        val currentMrXPosition = gameUpdate?.playerPositions?.get(mrXName)
-        val currentMyPosition = gameUpdate?.playerPositions?.get(username)
-
-        val mrXPositionChanged = currentMrXPosition != null && currentMrXPosition != -1 && currentMrXPosition != lastMrXPosition
 
 
-        if (mrXPositionChanged && !isScrollingToMrX && currentMyPosition != null) {
-            isScrollingToMrX = true
-
-            scrollToPosition(currentMrXPosition!!, coroutineScope)
-            lastMrXPosition = currentMrXPosition
-
-            delay(3000)
-
-
-            scrollToPosition(currentMyPosition, coroutineScope)
-            lastMyPosition = currentMyPosition
-
-            isScrollingToMrX = false
-        }
-        gameVm.fetchMrXHistory(gameId) { history ->
-            mrXHistory = history
-        }
-
-    }
 
 
 
@@ -284,7 +260,7 @@ fun GameScreen(
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(30_000) // alle 30 Sekunden
+            delay(10_000) // alle 30 Sekunden
             val player = userSessionVm.username.value ?: continue
             lobbyVm.sendPingToGame(gameId, player)
         }
@@ -531,34 +507,43 @@ fun GameScreen(
                     )
                 }
             }
-            IconButton(
-                onClick = {
-                    val player = userSessionVm.username.value
+            Box(modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 80.dp, end = 16.dp)) {
 
-                    if (player != null) {
-                        gameVm.leaveGame(gameId, player) {
-                            Log.d("STOMP", "Leave im GameScreen – verzögere Navigation")
+                IconButton(onClick = { showSettingsMenu = true }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_settings),
+                        contentDescription = "Einstellungen",
+                    )
+                }
 
+                DropdownMenu(
+                    expanded = showSettingsMenu,
+                    onDismissRequest = { showSettingsMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Spiel verlassen") },
+                        onClick = {
+                            showSettingsMenu = false
+                            val player = userSessionVm.username.value
 
-                            CoroutineScope(Dispatchers.Main).launch {
-                                delay(300) // gibt WebSocket etwas Zeit
+                            if (player != null) {
+                                gameVm.leaveGame(gameId, player) {
+                                    Log.d("STOMP", "Leave über Menü")
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        delay(1)
+                                        navigateToLobby = true
+                                    }
+                                }
+                            } else {
                                 navigateToLobby = true
                             }
                         }
-                    } else {
-                        navigateToLobby = true
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 80.dp, end = 16.dp)
-                    .size(48.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_settings),
-                    contentDescription = "Einstellungen",
-                )
+                    )
+                }
             }
+
 
         }
     }

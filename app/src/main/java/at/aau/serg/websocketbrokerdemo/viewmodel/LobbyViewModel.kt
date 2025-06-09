@@ -2,7 +2,6 @@ package at.aau.serg.websocketbrokerdemo.viewmodel
 
 import LobbyRepository
 import android.content.Context
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
@@ -40,7 +39,7 @@ class LobbyViewModel(
     private var connectedGameId: String? = null
 
 
-    var alreadyConnected = false
+
 
     /** 1) neue Lobby erstellen */
     fun createLobby(isPublic: Boolean, creatorName: String) = viewModelScope.launch {
@@ -124,6 +123,17 @@ class LobbyViewModel(
     fun selectRole(gameId: String, player: String, role: String) {
         stompManager.sendSelectedRole(gameId, player, role)
     }
+
+    fun addBotToLobby(gameId: String) {
+
+        stompManager.sendAddBot(gameId)
+    }
+
+    fun removeBotFromLobby(gameId: String) {
+        stompManager.sendRemoveBot(gameId)
+    }
+
+
 
 
     fun sendLeave(gameId: String, player: String, onLeft: () -> Unit) = viewModelScope.launch {

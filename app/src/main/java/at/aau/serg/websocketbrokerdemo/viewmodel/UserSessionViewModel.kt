@@ -1,5 +1,8 @@
 package at.aau.serg.websocketbrokerdemo.viewmodel
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -31,4 +34,29 @@ class UserSessionViewModel : ViewModel() {
     fun getMrXName(): String? {
         return roles.entries.firstOrNull { it.value == "MRX" }?.key
     }
+
+    var isOffline = mutableStateOf(false)
+        private set
+
+    fun setOffline(value: Boolean) {
+        isOffline.value = value
+    }
+
+    fun startNetworkMonitor(context: Context) {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                setOffline(false)
+            }
+
+            override fun onLost(network: Network) {
+                setOffline(true)
+            }
+        }
+
+        connectivityManager.registerDefaultNetworkCallback(networkCallback)
+    }
+
+
 }
