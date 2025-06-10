@@ -27,7 +27,7 @@ class GameViewModel(
     var message by mutableStateOf("")
         private set
 
-    val shakeDirection = MutableLiveData<String>()
+    val shakeDirectionLabel = MutableLiveData<String>()
 
     val currentPlayerPosition = MutableLiveData<Int>()
 
@@ -60,10 +60,8 @@ class GameViewModel(
     fun move(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
         viewModelScope.launch {
             try {
-
                 message = repository.move(gameId, name, to, gotTicket)
                 vibrate(context)
-                currentPlayerPosition.value = to
             }catch (e:Exception){
                 errorMessage = e.message
             }
@@ -86,7 +84,6 @@ class GameViewModel(
     fun blackMove(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
         viewModelScope.launch {
             try {
-
                 message = repository.blackMove(gameId, name, to, gotTicket)
                 vibrate(context)
             }catch (e:Exception){
@@ -179,15 +176,16 @@ class GameViewModel(
         isDoubleMoveMode = false
     }
 
-    fun onShakeDetected(context: Context, currentField: Int, gameId: String, name: String) {
+    fun onShakeDetected(context: Context, gameId: String, name: String) {
         viewModelScope.launch {
+            val currentField = currentPlayerPosition.value ?: return@launch
             val mrXField = repository.shakeAndGetMrXPosition(gameId, name)
             if (mrXField == -1) return@launch
 
             val direction = calculateDirection(context, currentField, mrXField)
-            shakeDirection.value = direction
-            delay(3000)
-            shakeDirection.value = ""
+            shakeDirectionLabel.value = direction
+            delay(50000)
+            shakeDirectionLabel.value = ""
         }
     }
 
