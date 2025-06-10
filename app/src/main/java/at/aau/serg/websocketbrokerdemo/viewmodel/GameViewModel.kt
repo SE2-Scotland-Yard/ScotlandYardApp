@@ -109,23 +109,6 @@ class GameViewModel(
             }
         }
     }
-    /*fun moveDouble(
-        gameId: String,
-        name: String,
-        firstTo: Int,
-        firstTicket: String,
-        secondTo: Int,
-        secondTicket: String
-    ) {
-        viewModelScope.launch {
-            try {
-                val response = repository.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
-                message = response.message
-            } catch (e: Exception) {
-                errorMessage = e.message
-            }
-        }
-    }*/
 
     fun fetchAllowedDoubleMoves(gameId: String, name: String) {
         viewModelScope.launch {

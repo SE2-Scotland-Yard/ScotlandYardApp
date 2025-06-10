@@ -143,7 +143,33 @@ fun GameScreen(
 
     }
 
+    LaunchedEffect(gameUpdate?.playerPositions) {
+        val mrXName = userSessionVm.getMrXName()
+        val currentMrXPosition = gameUpdate?.playerPositions?.get(mrXName)
+        val currentMyPosition = gameUpdate?.playerPositions?.get(username)
 
+        val mrXPositionChanged = currentMrXPosition != null && currentMrXPosition != -1 && currentMrXPosition != lastMrXPosition
+
+
+        if (mrXPositionChanged && !isScrollingToMrX && currentMyPosition != null) {
+            isScrollingToMrX = true
+
+            scrollToPosition(currentMrXPosition!!, coroutineScope)
+            lastMrXPosition = currentMrXPosition
+
+            delay(3000)
+
+
+            scrollToPosition(currentMyPosition, coroutineScope)
+            lastMyPosition = currentMyPosition
+
+            isScrollingToMrX = false
+        }
+        gameVm.fetchMrXHistory(gameId) { history ->
+            mrXHistory = history
+        }
+
+    }
 
 
 
@@ -186,9 +212,7 @@ fun GameScreen(
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
-            gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
                 gameVm.updateDoubleMoveMode(false)
             }
         }
@@ -198,11 +222,6 @@ fun GameScreen(
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
-            gameVm.fetchMrXPosition(gameId, username)
-            if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
-
-            }
         }
     }
 
@@ -229,9 +248,6 @@ fun GameScreen(
         if (username != null) {
 
             gameVm.fetchMrXPosition(gameId, username)
-            if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
-            }
             if (gameUpdate?.currentPlayer != username) {
                 gameVm.resetMoveModes()
             }
@@ -331,7 +347,7 @@ fun GameScreen(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp)
+                        .padding(top=60.dp,end = 16.dp)
                         .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
                         .padding(horizontal = 12.dp, vertical = 20.dp)
                 ) {
@@ -756,7 +772,7 @@ private fun Stations(
                 DropdownMenu(
                     expanded = true,
                     onDismissRequest = { expandedStates[id] = false },
-                    modifier = Modifier.background(Color.White)
+                    modifier = Modifier.background(Color.Black.copy(alpha=0.85f))
                 ) {
                     movesForStation.forEach { move ->
 
@@ -776,7 +792,65 @@ private fun Stations(
 
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("${ticketType.substringBeforeLast("+")} → Station $targetStation")  },
+                                modifier = Modifier.height(40.dp),
+                                text= {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    ) {
+                                       
+                                        val ticketParts = ticketType.split("+")
+                                        val firstTicketBaseType = ticketParts.firstOrNull() ?: ""
+                                        val secondTicketBaseType = if (ticketParts.size > 1) ticketParts[1] else ""
+                                        val positionPart = if (ticketParts.size > 2 && ticketParts.last().startsWith("POS")) ticketParts.last() else ""
+
+
+                                        fun getImageResId(baseType: String): Int? {
+                                            return when (baseType) {
+                                                "BUS" -> R.drawable.ticket_bus
+                                                "TAXI" -> R.drawable.ticket_taxi
+                                                "UNDERGROUND" -> R.drawable.ticket_under
+                                                "BLACK" -> R.drawable.ticket_black
+                                                else -> null
+                                            }
+                                        }
+
+                                        getImageResId(firstTicketBaseType)?.let { resId ->
+                                            Image(
+                                                painter = painterResource(id = resId),
+                                                contentDescription = "$firstTicketBaseType Icon",
+                                                modifier = Modifier.size(36.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                        }
+
+                                        if (secondTicketBaseType.isNotEmpty() && secondTicketBaseType != positionPart && ticketParts.size > 1) {
+                                            getImageResId(secondTicketBaseType)?.let { resId ->
+                                                Image(
+                                                    painter = painterResource(id = resId),
+                                                    contentDescription = "$secondTicketBaseType Icon",
+                                                    modifier = Modifier.size(36.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        } else if (firstTicketBaseType.isNotEmpty() && secondTicketBaseType.isEmpty()) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
+
+                                        Text(
+                                            text = buildString {
+                                                if (positionPart.isNotEmpty()) {
+                                                    append(" ($positionPart)")
+                                                }
+                                                append(" → Station $targetStation")
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.White
+                                            )
+                                        )
+                                    }
+                                },
                                 onClick = {
                                     username?.let { name ->
                                         when {
