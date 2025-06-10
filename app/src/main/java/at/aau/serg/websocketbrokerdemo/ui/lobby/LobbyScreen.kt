@@ -419,20 +419,6 @@ fun LobbyScreen(
                         Text("Avatar wählen")
                     }
 
-                    Button(
-                        onClick = { lobbyVm.addBotToLobby(gameId) },
-                        enabled = !lobby.isStarted,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorResource(id = R.color.buttonStartScreen),
-                            contentColor = Color.Black
-                        )
-                    ) {
-                        Text("Bot hinzufügen")
-                    }
-
-
-
-
                 }
             }
         } ?: Box(
