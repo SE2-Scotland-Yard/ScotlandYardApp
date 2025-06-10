@@ -766,7 +766,65 @@ private fun Stations(
 
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("${ticketType.substringBeforeLast("+")} → Station $targetStation")  },
+                                modifier = Modifier.height(40.dp),
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    ) {
+                                       
+                                        val ticketParts = ticketType.split("+")
+                                        val firstTicketBaseType = ticketParts.firstOrNull() ?: ""
+                                        val secondTicketBaseType = if (ticketParts.size > 1) ticketParts[1] else ""
+                                        val positionPart = if (ticketParts.size > 2 && ticketParts.last().startsWith("POS")) ticketParts.last() else ""
+
+
+                                        fun getImageResId(baseType: String): Int? {
+                                            return when (baseType) {
+                                                "BUS" -> R.drawable.ticket_bus
+                                                "TAXI" -> R.drawable.ticket_taxi
+                                                "UNDERGROUND" -> R.drawable.ticket_under
+                                                "BLACK" -> R.drawable.ticket_black
+                                                else -> null
+                                            }
+                                        }
+
+                                        getImageResId(firstTicketBaseType)?.let { resId ->
+                                            Image(
+                                                painter = painterResource(id = resId),
+                                                contentDescription = "$firstTicketBaseType Icon",
+                                                modifier = Modifier.size(36.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                        }
+
+                                        if (secondTicketBaseType.isNotEmpty() && secondTicketBaseType != positionPart && ticketParts.size > 1) {
+                                            getImageResId(secondTicketBaseType)?.let { resId ->
+                                                Image(
+                                                    painter = painterResource(id = resId),
+                                                    contentDescription = "$secondTicketBaseType Icon",
+                                                    modifier = Modifier.size(36.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        } else if (firstTicketBaseType.isNotEmpty() && secondTicketBaseType.isEmpty()) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
+
+                                        Text(
+                                            text = buildString {
+                                                if (positionPart.isNotEmpty()) {
+                                                    append(" ($positionPart)")
+                                                }
+                                                append(" → Station $targetStation")
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        )
+                                    }
+                                },
                                 onClick = {
                                     username?.let { name ->
                                         when {
