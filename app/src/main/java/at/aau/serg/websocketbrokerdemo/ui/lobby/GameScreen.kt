@@ -2,6 +2,8 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import android.app.Activity
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -107,6 +109,10 @@ fun GameScreen(
     val coroutineScope = rememberCoroutineScope()
     var lastMrXPosition by remember { mutableStateOf<Int?>(null) }
     var lastMyPosition by remember { mutableStateOf<Int?>(null) }
+    var showLeaveDialog by remember { mutableStateOf(false) }
+    var showMrXSurrenderedOverlay by remember { mutableStateOf(false) }
+    var showSettingsMenu by remember { mutableStateOf(false) }
+
 
 
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
@@ -137,33 +143,8 @@ fun GameScreen(
 
     }
 
-    LaunchedEffect(gameUpdate?.playerPositions) {
-        val mrXName = userSessionVm.getMrXName()
-        val currentMrXPosition = gameUpdate?.playerPositions?.get(mrXName)
-        val currentMyPosition = gameUpdate?.playerPositions?.get(username)
-
-        val mrXPositionChanged = currentMrXPosition != null && currentMrXPosition != -1 && currentMrXPosition != lastMrXPosition
 
 
-        if (mrXPositionChanged && !isScrollingToMrX && currentMyPosition != null) {
-            isScrollingToMrX = true
-
-            scrollToPosition(currentMrXPosition!!, coroutineScope)
-            lastMrXPosition = currentMrXPosition
-
-            delay(3000)
-
-
-            scrollToPosition(currentMyPosition, coroutineScope)
-            lastMyPosition = currentMyPosition
-
-            isScrollingToMrX = false
-        }
-        gameVm.fetchMrXHistory(gameId) { history ->
-            mrXHistory = history
-        }
-
-    }
 
 
 
@@ -255,9 +236,7 @@ fun GameScreen(
                 gameVm.resetMoveModes()
             }
         }
-    }
-    //Verwendetes Ticket für 2 Sek einblenden
-    LaunchedEffect(gameUpdate) {
+
         val ticket = gameUpdate?.lastTicketUsed
         if (!ticket.isNullOrBlank()) {
             visibleTicket = ticket
@@ -265,6 +244,28 @@ fun GameScreen(
             visibleTicket = ""
         }
     }
+
+
+    LaunchedEffect(Unit) {
+        lobbyVm.setSystemMessageHandler { message ->
+            Log.d("SYSTEM_HANDLER", "Got system message: '$message'")
+            if (message == "mrX") {
+                showMrXSurrenderedOverlay = true
+            } else {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000) // alle 30 Sekunden
+            val player = userSessionVm.username.value ?: continue
+            lobbyVm.sendPingToGame(gameId, player)
+        }
+    }
+
 
 
     Scaffold { padding ->
@@ -454,6 +455,16 @@ fun GameScreen(
                 )
             }
 
+            if (showMrXSurrenderedOverlay) {
+                MrXSurrenderedOverlay(
+                    onDismiss = {
+                        showMrXSurrenderedOverlay = false
+                        navigateToLobby = true
+                    }
+                )
+            }
+
+
             Box(modifier = Modifier
                 .padding(2.dp)
                 .align(Alignment.TopStart)
@@ -483,6 +494,8 @@ fun GameScreen(
                         .size(56.dp)
                         .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
                     contentAlignment = Alignment.Center
+
+
                 ) {
                     Image(
                         painter = painterResource(id = avatarRes),
@@ -494,6 +507,43 @@ fun GameScreen(
                     )
                 }
             }
+            Box(modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 80.dp, end = 16.dp)) {
+
+                IconButton(onClick = { showSettingsMenu = true }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_settings),
+                        contentDescription = "Einstellungen",
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showSettingsMenu,
+                    onDismissRequest = { showSettingsMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Spiel verlassen") },
+                        onClick = {
+                            showSettingsMenu = false
+                            val player = userSessionVm.username.value
+
+                            if (player != null) {
+                                gameVm.leaveGame(gameId, player) {
+                                    Log.d("STOMP", "Leave über Menü")
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        delay(1)
+                                        navigateToLobby = true
+                                    }
+                                }
+                            } else {
+                                navigateToLobby = true
+                            }
+                        }
+                    )
+                }
+            }
+
 
         }
     }

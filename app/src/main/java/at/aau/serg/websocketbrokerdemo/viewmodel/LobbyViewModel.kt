@@ -1,7 +1,7 @@
 package at.aau.serg.websocketbrokerdemo.viewmodel
 
 import LobbyRepository
-import android.widget.Toast
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
@@ -36,9 +36,10 @@ class LobbyViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+    private var connectedGameId: String? = null
 
 
-    var alreadyConnected = false
+
 
     /** 1) neue Lobby erstellen */
     fun createLobby(isPublic: Boolean, creatorName: String) = viewModelScope.launch {
@@ -59,17 +60,23 @@ class LobbyViewModel(
     /**
      * 3) Lobby per REST beitreten → danach WS aufbauen
      */
-    suspend fun tryJoinLobby(gameId: String, playerName: String): String {
+    suspend fun tryJoinLobby(gameId: String, playerName: String,context: Context): String {
         return runCatching {
             println("Versuche Lobby beizutreten: gameId=$gameId, playerName=$playerName")
 
             val joinResponse = repository.joinLobby(gameId, playerName)
+            if (joinResponse == null) {
+                println("Join fehlgeschlagen – joinResponse war null.")
+                return ""
+            }
+
             println("Beitritt erfolgreich, Antwort: ${joinResponse.message}")
 
             fetchLobbyStatus(gameId)
-            connectToLobby(gameId)
+            connectToLobby(gameId, context)
 
-            joinResponse.message
+            return joinResponse.message
+
         }.getOrElse {
             println("Fehler beim Beitritt: ${it.message}")
             it.printStackTrace()
@@ -83,18 +90,20 @@ class LobbyViewModel(
      */
     fun connectToLobby(
         gameId: String,
-        onConnected: () -> Unit = {}
+        context: Context,
+        onConnected: () -> Unit = {},
+        onSystemMessage: (String) -> Unit = {}
     ) {
-        if (alreadyConnected) return
+        if (connectedGameId == gameId) return
 
         stompManager.connectToAllTopics(
             gameId,
             onConnected = onConnected,
             onLobbyUpdate = { _lobbyStatus.value = it },
-            onErrorMessage = { msg -> _errorMessage.value = msg }
-
+            context = context,
+            onErrorMessage = { msg -> _errorMessage.value = msg },
+            onSystemMessage = onSystemMessage
         )
-
 
         viewModelScope.launch {
             stompManager.lobbyUpdates.collectLatest { _lobbyStatus.value = it }
@@ -104,7 +113,7 @@ class LobbyViewModel(
             stompManager.gameUpdates.collectLatest { _gameState.value = it }
         }
 
-        alreadyConnected = true
+        connectedGameId = gameId
     }
 
 
@@ -115,13 +124,24 @@ class LobbyViewModel(
         stompManager.sendSelectedRole(gameId, player, role)
     }
 
+    fun addBotToLobby(gameId: String) {
+
+        stompManager.sendAddBot(gameId)
+    }
+
+    fun removeBotFromLobby(gameId: String) {
+        stompManager.sendRemoveBot(gameId)
+    }
+
+
+
 
     fun sendLeave(gameId: String, player: String, onLeft: () -> Unit) = viewModelScope.launch {
         stompManager.sendLeaveLobby(gameId, player)
         delay(200)
 
         stompManager.disconnect()
-        alreadyConnected = false
+        connectedGameId = null
 
         _createdLobby.value = null
         _lobbyStatus.value = null
@@ -131,6 +151,12 @@ class LobbyViewModel(
         }
     }
 
+    fun setSystemMessageHandler(handler: (String) -> Unit) {
+        stompManager.systemMessageHandler = handler
+    }
+
+
+
 
 
 
@@ -139,9 +165,14 @@ class LobbyViewModel(
         stompManager.sendReady(gameId, playerName)
     }
 
-    fun sendPing(gameId: String, player: String) {
-        stompManager.sendPing(gameId, player)
+    fun sendPingToLobby(gameId: String, player: String) {
+        stompManager.sendLobbyPing(gameId, player)
     }
+
+    fun sendPingToGame(gameId: String, player: String) {
+        stompManager.sendGamePing(gameId, player)
+    }
+
 
 
     /** 6) öffentliche Lobbys */
