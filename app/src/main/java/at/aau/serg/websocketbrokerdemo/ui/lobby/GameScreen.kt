@@ -746,7 +746,7 @@ private fun Stations(
                 DropdownMenu(
                     expanded = true,
                     onDismissRequest = { expandedStates[id] = false },
-                    modifier = Modifier.background(Color.White)
+                    modifier = Modifier.background(Color.Black.copy(alpha=0.85f))
                 ) {
                     movesForStation.forEach { move ->
 
@@ -767,7 +767,7 @@ private fun Stations(
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
                             DropdownMenuItem(
                                 modifier = Modifier.height(40.dp),
-                                text = {
+                                text= {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = 8.dp)
@@ -820,7 +820,7 @@ private fun Stations(
                                             },
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                color = Color.White
                                             )
                                         )
                                     }
