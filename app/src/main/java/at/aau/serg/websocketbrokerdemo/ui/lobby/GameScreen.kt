@@ -321,7 +321,7 @@ fun GameScreen(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp)
+                        .padding(top=60.dp,end = 16.dp)
                         .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
                         .padding(horizontal = 12.dp, vertical = 20.dp)
                 ) {
