@@ -186,9 +186,7 @@ fun GameScreen(
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
-            gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
                 gameVm.updateDoubleMoveMode(false)
             }
         }
@@ -198,11 +196,6 @@ fun GameScreen(
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
-            gameVm.fetchMrXPosition(gameId, username)
-            if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
-
-            }
         }
     }
 
@@ -229,9 +222,6 @@ fun GameScreen(
         if (username != null) {
 
             gameVm.fetchMrXPosition(gameId, username)
-            if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
-            }
             if (gameUpdate?.currentPlayer != username) {
                 gameVm.resetMoveModes()
             }
