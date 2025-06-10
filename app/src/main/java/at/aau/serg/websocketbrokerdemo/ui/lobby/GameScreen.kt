@@ -665,6 +665,16 @@ fun Map(
                 )
                 Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
                 PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition,gameUpdate)
+
+                val directionLabel by gameVm.shakeDirectionLabel.observeAsState()
+
+                DirectionArrowFromLabel(
+                    direction = directionLabel,
+                    fromField = gameUpdate?.playerPositions?.get(username),
+                    pointPositions = gameVm.pointPositions,
+                    scale = gameVm.scale
+                )
+
             }
         }
     }
@@ -1315,6 +1325,59 @@ fun TicketAnimatedButton(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillBounds
         )
+    }
+}
+
+
+@Composable
+fun DirectionArrowFromLabel(
+    direction: String?,
+    fromField: Int?,
+    pointPositions: Map<Int, Pair<Int, Int>>,
+    scale: Float
+) {
+    if (direction.isNullOrBlank() || fromField == null) return
+    val from = pointPositions[fromField] ?: return
+
+    val density = LocalDensity.current
+    val base = Offset(from.first * scale, from.second * scale)
+
+    val lengthPx = with(density) { 1.0f * Resources.getSystem().displayMetrics.xdpi / 2.54f}   // ≈ 1 cm
+    val strokeWidthPx = with(density) { 0.3f * Resources.getSystem().displayMetrics.xdpi / 2.54f} // ≈ 3 mm
+
+    val angleRad = when (direction.lowercase()) {
+        "Norden" -> -90f
+        "Nordost" -> -45f
+        "Osten" -> 0f
+        "Südost" -> 45f
+        "Süden" -> 90f
+        "Südwest" -> 135f
+        "Westen" -> 180f
+        "Nordwest" -> -135f
+        else -> null
+    }?.let { Math.toRadians(it.toDouble()).toFloat() } ?: return
+
+    val end = Offset(
+        base.x + lengthPx * cos(angleRad),
+        base.y + lengthPx * sin(angleRad)
+    )
+    val arrowLength = strokeWidthPx * 2.5f
+    val arrowAngle1 = angleRad - Math.toRadians(30.0).toFloat()
+    val arrowAngle2 = angleRad + Math.toRadians(30.0).toFloat()
+
+    val arrowPoint1 = Offset(
+        end.x - arrowLength * cos(arrowAngle1),
+        end.y - arrowLength * sin(arrowAngle1)
+    )
+    val arrowPoint2 = Offset(
+        end.x - arrowLength * cos(arrowAngle2),
+        end.y - arrowLength * sin(arrowAngle2)
+    )
+    val arrowColor = Color(0xFF0E579B)
+    Canvas(modifier = Modifier.fillMaxSize().zIndex(10f)) {
+        drawLine(color = arrowColor, start = base, end = end, strokeWidth = strokeWidthPx)
+        drawLine(color = arrowColor, start = end, end = arrowPoint1, strokeWidth = strokeWidthPx)
+        drawLine(color = arrowColor, start = end, end = arrowPoint2, strokeWidth = strokeWidthPx)
     }
 }
 
