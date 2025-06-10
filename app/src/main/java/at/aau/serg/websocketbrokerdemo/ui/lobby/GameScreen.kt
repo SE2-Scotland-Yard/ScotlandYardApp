@@ -143,7 +143,33 @@ fun GameScreen(
 
     }
 
+    LaunchedEffect(gameUpdate?.playerPositions) {
+        val mrXName = userSessionVm.getMrXName()
+        val currentMrXPosition = gameUpdate?.playerPositions?.get(mrXName)
+        val currentMyPosition = gameUpdate?.playerPositions?.get(username)
 
+        val mrXPositionChanged = currentMrXPosition != null && currentMrXPosition != -1 && currentMrXPosition != lastMrXPosition
+
+
+        if (mrXPositionChanged && !isScrollingToMrX && currentMyPosition != null) {
+            isScrollingToMrX = true
+
+            scrollToPosition(currentMrXPosition!!, coroutineScope)
+            lastMrXPosition = currentMrXPosition
+
+            delay(3000)
+
+
+            scrollToPosition(currentMyPosition, coroutineScope)
+            lastMyPosition = currentMyPosition
+
+            isScrollingToMrX = false
+        }
+        gameVm.fetchMrXHistory(gameId) { history ->
+            mrXHistory = history
+        }
+
+    }
 
 
 
