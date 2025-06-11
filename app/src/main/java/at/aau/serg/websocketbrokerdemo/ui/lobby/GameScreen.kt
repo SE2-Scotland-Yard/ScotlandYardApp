@@ -1,7 +1,10 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -67,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun GameScreen(
     gameId: String,
@@ -103,7 +107,9 @@ fun GameScreen(
     val screenWidth = remember { context.resources.displayMetrics.widthPixels }
     val screenHeight = remember { context.resources.displayMetrics.heightPixels }
 
-    val isMyTurn = username == gameUpdate?.currentPlayer
+    val isMyTurn by derivedStateOf {
+        username == gameUpdate?.currentPlayer
+    }
 
     var isScrollingToMrX by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -112,6 +118,14 @@ fun GameScreen(
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showMrXSurrenderedOverlay by remember { mutableStateOf(false) }
     var showSettingsMenu by remember { mutableStateOf(false) }
+
+    var showCheatArrow by remember { mutableStateOf(false) }
+    var mrxXY by remember { mutableStateOf(Pair(0f, 0f)) }
+    var hasUsedCheat by remember { mutableStateOf(false) }
+    val hasSeenCheatHint = remember { mutableStateOf(false) }
+    val showCheatHint = remember { mutableStateOf(false) }
+
+
 
 
 
@@ -170,6 +184,59 @@ fun GameScreen(
         }
 
     }
+
+    DisposableEffect(Unit) {
+        val sensorManager = context.getSystemService(Activity.SENSOR_SERVICE) as SensorManager
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        val shakeDetector = ShakeDetector {
+            Log.d("SHAKE", "Shake erkannt!")
+
+            if (isMyTurn && username != "MrX" && myPosition != null  && !hasUsedCheat) {
+                Log.d("SHAKE", "isMyTurn = $isMyTurn, username = $username, myPosition = $myPosition")
+
+                hasUsedCheat = true
+
+                coroutineScope.launch {
+                    val mrXName = userSessionVm.getMrXName()
+                    Log.d("SHAKE", "MrX Name: $mrXName")
+
+                    mrXName?.let {
+                        gameVm.fetchMrXPosition(gameId, it)
+                    }
+
+                    delay(200)
+
+                    val pointPositions = gameVm.repository.getPointPositions(context)
+                    val myXYRaw = pointPositions[myPosition] ?: Pair(0, 0)
+                    Log.d("SHAKE", "myXYRaw = $myXYRaw")
+
+                    val mrXStationId = gameVm.mrXPosition
+                    Log.d("SHAKE", "MrX Station ID: $mrXStationId")
+
+                    val mrxXYRaw = pointPositions[mrXStationId] ?: Pair(0, 0)
+                    Log.d("SHAKE", "mrxXYRaw = $mrxXYRaw")
+
+                    mrxXY = Pair(mrxXYRaw.first.toFloat(), mrxXYRaw.second.toFloat())
+                    Log.d("SHAKE", "mrxXY gesetzt auf: $mrxXY")
+
+                    showCheatArrow = true
+                    Log.d("SHAKE", "showCheatArrow = true")
+                }
+            } else {
+                Log.d("SHAKE", "Shake ignoriert: isMyTurn=$isMyTurn, username=$username, myPosition=$myPosition")
+            }
+        }
+
+        sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI)
+
+        onDispose {
+            sensorManager.unregisterListener(shakeDetector)
+        }
+    }
+
+
+
 
 
 
@@ -282,6 +349,23 @@ fun GameScreen(
         }
     }
 
+    LaunchedEffect(isMyTurn) {
+        if (!isMyTurn && showCheatArrow) {
+            showCheatArrow = false
+            Log.d("SHAKE", "Zug vorbei – Cheat-Pfeil ausgeblendet")
+        }
+
+        if (isMyTurn && !hasUsedCheat && !hasSeenCheatHint.value && userSessionVm.role.value != "MRX") {
+            delay(1500) //  verzögert
+            showCheatHint.value = true
+            hasSeenCheatHint.value = true
+        }
+    }
+
+
+
+
+
 
 
     Scaffold { padding ->
@@ -296,7 +380,23 @@ fun GameScreen(
                 .padding(padding)
         ) {
 
-            Map(gameVm, useSmallMap, allowedMoves,gameId,username,playerPositions,isMyTurn,userSessionVm,mrXPosition,scrollStateX,scrollStateY,gameUpdate)
+            Map(
+                gameVm = gameVm,
+                useSmallMap = useSmallMap,
+                allowedMoves = allowedMoves,
+                gameId = gameId,
+                username = username,
+                playerPositions = playerPositions,
+                isMyTurn = isMyTurn,
+                userSessionVm = userSessionVm,
+                mrXPosition = mrXPosition,
+                scrollStateX = scrollStateX,
+                scrollStateY = scrollStateY,
+                gameUpdate = gameUpdate,
+                showCheatArrow = showCheatArrow,
+                mrxXY = mrxXY
+            )
+
             BottomBar(
                 gameVm = gameVm,
                 userSessionVm = userSessionVm,
@@ -495,6 +595,44 @@ fun GameScreen(
                         text = "$currentRound",
                         color = Color.White)
                 }
+                //cheat hint, wird bei klick weider ausgeblendet
+                if (showCheatHint.value) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(3f)
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                showCheatHint.value = false
+                            },
+                        contentAlignment = Alignment.BottomStart
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .background(Color.Black.copy(alpha = 0.75f), shape = RoundedCornerShape(12.dp))
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .clickable(enabled = false) {}
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Letzte Energie?",
+                                    style = MaterialTheme.typography.titleMedium.copy(color = Color.White)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Dein Ortungsgerät flackert – die Batterie schafft vielleicht noch einen letzten Ping.\n" +
+                                            "Ein kräftiger Ruck kann es nochmal zum Leben erwecken.\n" +
+                                            "Aber nur während deines Zugs – und nur ein einziges Mal!",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = Color.White)
+                                )
+                            }
+                        }
+                    }
+                }
+
             }
 
             val currentPlayer = gameUpdate?.currentPlayer
@@ -538,6 +676,16 @@ fun GameScreen(
                     expanded = showSettingsMenu,
                     onDismissRequest = { showSettingsMenu = false }
                 ) {
+                    if (userSessionVm.role.value != "MRX") {
+                        DropdownMenuItem(
+                            text = { Text("Ortungsgerät prüfen") },
+                            onClick = {
+                                showSettingsMenu = false
+                                showCheatHint.value = true
+                            }
+                        )
+                    }
+
                     DropdownMenuItem(
                         text = { Text("Spiel verlassen") },
                         onClick = {
@@ -558,6 +706,10 @@ fun GameScreen(
                         }
                     )
                 }
+
+
+
+
             }
 
 
@@ -670,7 +822,9 @@ fun Map(
     mrXPosition: Int?,
     scrollStateX: ScrollState,
     scrollStateY: ScrollState,
-    gameUpdate: GameUpdate?
+    gameUpdate: GameUpdate?,
+    mrxXY: Pair<Float, Float>,
+    showCheatArrow: Boolean
 ) {
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
     val intrinsicSize = mapPainter.intrinsicSize
@@ -679,6 +833,8 @@ fun Map(
     val density = LocalDensity.current
     val virtualWidthDp = with(density) { (intrinsicSize.width * gameVm.scale).toDp() }
     val virtualHeightDp = with(density) { (intrinsicSize.height * gameVm.scale).toDp() }
+
+    val myPosition = gameUpdate?.playerPositions?.get(username)
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -703,6 +859,20 @@ fun Map(
                 )
                 Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
                 PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition,gameUpdate)
+
+                //pfeil zeigen(mitskaliert mit der map)
+                if (showCheatArrow && myPosition != null) {
+                    val pointPositions = gameVm.repository.getPointPositions(LocalContext.current)
+                    val myXYRaw = pointPositions[myPosition] ?: Pair(0, 0)
+                    val myXY = Pair(myXYRaw.first.toFloat(), myXYRaw.second.toFloat())
+
+                    CheatArrow(
+                        myXY = myXY,
+                        mrxXY = mrxXY,
+                        scale = gameVm.scale
+                    )
+                }
+
             }
         }
     }
@@ -798,7 +968,7 @@ private fun Stations(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = 8.dp)
                                     ) {
-                                       
+
                                         val ticketParts = ticketType.split("+")
                                         val firstTicketBaseType = ticketParts.firstOrNull() ?: ""
                                         val secondTicketBaseType = if (ticketParts.size > 1) ticketParts[1] else ""
