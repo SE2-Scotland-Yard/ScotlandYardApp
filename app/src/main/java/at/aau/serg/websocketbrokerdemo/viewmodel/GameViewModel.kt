@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 
 
 class GameViewModel(
-    private val repository: GameRepository = GameRepository(),
+    val repository: GameRepository = GameRepository(),
     context: Context
 ) : ViewModel() {
 
