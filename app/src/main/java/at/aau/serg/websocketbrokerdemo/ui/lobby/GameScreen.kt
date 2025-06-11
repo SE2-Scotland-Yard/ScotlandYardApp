@@ -790,6 +790,8 @@ private fun Stations(
                             }
                         }
 
+                        val context = LocalContext.current
+
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
                             DropdownMenuItem(
                                 modifier = Modifier.height(40.dp),
@@ -861,14 +863,14 @@ private fun Stations(
                                                 gameVm.doubleMove(gameId, name, targetStation, blackTicket)
                                             }
                                             gameVm.isBlackMoveMode -> {
-                                                gameVm.blackMove(gameId, name, targetStation, ticketType)
+                                                gameVm.blackMove(gameId, name, targetStation, ticketType, context)
                                             }
                                             gameVm.isDoubleMoveMode -> {
                                                 gameVm.doubleMove(gameId, name, targetStation, ticketType)
                                             }
                                             else -> {
 
-                                                gameVm.move(gameId, name, targetStation, ticketType)
+                                                gameVm.move(gameId, name, targetStation, ticketType, context)
                                             }
                                         }
                                         expandedStates[id] = false

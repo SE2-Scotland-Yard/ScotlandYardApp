@@ -1,5 +1,8 @@
 
 import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -55,11 +58,12 @@ class GameViewModel(
         isDoubleMoveMode = enabled
     }
 
-    fun move(gameId: String, name: String, to: Int, gotTicket: String) {
+    fun move(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
         viewModelScope.launch {
             try {
 
                 message = repository.move(gameId, name, to, gotTicket)
+                vibrate(context)
             }catch (e:Exception){
                 errorMessage = e.message
             }
@@ -79,11 +83,12 @@ class GameViewModel(
         }
     }
 
-    fun blackMove(gameId: String, name: String, to: Int, gotTicket: String) {
+    fun blackMove(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
         viewModelScope.launch {
             try {
 
                 message = repository.blackMove(gameId, name, to, gotTicket)
+                vibrate(context)
             }catch (e:Exception){
                 errorMessage = e.message
             }
@@ -167,6 +172,18 @@ class GameViewModel(
                 }
             } else {
                 Log.e("LEAVE", "Spiel verlassen fehlgeschlagen")
+            }
+        }
+    }
+
+    private fun vibrate(context: Context, durationMs: Long = 100) {
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        vibrator?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                it.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                it.vibrate(durationMs)
             }
         }
     }
