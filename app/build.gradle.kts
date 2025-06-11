@@ -143,6 +143,7 @@ dependencies {
     // --- WebSocket / STOMP (Krossbow) ---
     implementation(libs.krossbow.stomp.core)
     implementation(libs.krossbow.websocket.okhttp)
+    implementation(libs.androidx.media3.common.ktx)
 
     // --- Unit Testing ---
     testImplementation(libs.junit)
