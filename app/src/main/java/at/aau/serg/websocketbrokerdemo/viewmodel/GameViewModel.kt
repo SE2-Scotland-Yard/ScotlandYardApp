@@ -1,22 +1,21 @@
 
 import android.content.Context
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
-import at.aau.serg.websocketbrokerdemo.functions.CoordinateLoader
+import at.aau.serg.websocketbrokerdemo.websocket.StompManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class GameViewModel(
@@ -27,9 +26,6 @@ class GameViewModel(
     var message by mutableStateOf("")
         private set
 
-    val shakeDirectionLabel = MutableLiveData<String>()
-
-    val currentPlayerPosition = MutableLiveData<Int>()
 
     var mrXPosition :Int? by mutableStateOf(null)
 
@@ -53,15 +49,17 @@ class GameViewModel(
     var isDoubleMoveMode by mutableStateOf(false)
     var isBlackMoveMode by mutableStateOf(false)
 
+    private val stompManager = StompManager()
+
     fun updateDoubleMoveMode(enabled: Boolean) {
         isDoubleMoveMode = enabled
     }
 
-    fun move(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
+    fun move(gameId: String, name: String, to: Int, gotTicket: String) {
         viewModelScope.launch {
             try {
+
                 message = repository.move(gameId, name, to, gotTicket)
-                vibrate(context)
             }catch (e:Exception){
                 errorMessage = e.message
             }
@@ -81,11 +79,11 @@ class GameViewModel(
         }
     }
 
-    fun blackMove(gameId: String, name: String, to: Int, gotTicket: String, context: Context) {
+    fun blackMove(gameId: String, name: String, to: Int, gotTicket: String) {
         viewModelScope.launch {
             try {
+
                 message = repository.blackMove(gameId, name, to, gotTicket)
-                vibrate(context)
             }catch (e:Exception){
                 errorMessage = e.message
             }
@@ -111,23 +109,6 @@ class GameViewModel(
             }
         }
     }
-    /*fun moveDouble(
-        gameId: String,
-        name: String,
-        firstTo: Int,
-        firstTicket: String,
-        secondTo: Int,
-        secondTicket: String
-    ) {
-        viewModelScope.launch {
-            try {
-                val response = repository.moveDouble(gameId, name, firstTo, firstTicket, secondTo, secondTicket)
-                message = response.message
-            } catch (e: Exception) {
-                errorMessage = e.message
-            }
-        }
-    }*/
 
     fun fetchAllowedDoubleMoves(gameId: String, name: String) {
         viewModelScope.launch {
@@ -176,49 +157,18 @@ class GameViewModel(
         isDoubleMoveMode = false
     }
 
-    fun onShakeDetected(context: Context, gameId: String, name: String) {
+    fun leaveGame(gameId: String, playerId: String, onLeft: () -> Unit) {
         viewModelScope.launch {
-            val currentField = currentPlayerPosition.value ?: return@launch
-            val mrXField = repository.shakeAndGetMrXPosition(gameId, name)
-            if (mrXField == -1) return@launch
-
-            val direction = calculateDirection(context, currentField, mrXField)
-            shakeDirectionLabel.value = direction
-            delay(50000)
-            shakeDirectionLabel.value = ""
-        }
-    }
-
-    fun calculateDirection(context: Context, currentFieldId: Int, mrXFieldId: Int): String {
-        val coordinates = CoordinateLoader.load(context)
-        val from = coordinates[currentFieldId] ?: return ""
-        val to = coordinates[mrXFieldId] ?: return ""
-
-        val dx = to.x - from.x
-        val dy = to.y - from.y
-
-        return when {
-            dx > 0 && dy < 0 -> "Nordost"
-            dx < 0 && dy < 0 -> "Nordwest"
-            dx > 0 && dy > 0 -> "Südost"
-            dx < 0 && dy > 0 -> "Südwest"
-            dx == 0 && dy < 0 -> "Norden"
-            dx == 0 && dy > 0 -> "Süden"
-            dy == 0 && dx > 0 -> "Osten"
-            dy == 0 && dx < 0 -> "Westen"
-            else -> "Unbekannt"
-        }
-    }
-
-    private fun vibrate(context: Context, durationMs: Long = 100) {
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        vibrator?.let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                it.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
+            val success = repository.leaveGame(gameId, playerId)
+            if (success) {
+                stompManager.disconnect()
+                withContext(Dispatchers.Main) {
+                    onLeft()
+                }
             } else {
-                @Suppress("DEPRECATION")
-                it.vibrate(durationMs)
+                Log.e("LEAVE", "Spiel verlassen fehlgeschlagen")
             }
         }
     }
+
 }

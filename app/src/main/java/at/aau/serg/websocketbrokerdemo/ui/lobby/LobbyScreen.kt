@@ -1,6 +1,6 @@
 package at.aau.serg.websocketbrokerdemo.ui.lobby
 
-import android.util.Log
+
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,17 +40,21 @@ fun LobbyScreen(
     ) {
     val lobbyState by lobbyVm.lobbyStatus.collectAsState()
     val context = LocalContext.current
-    var toastShown by remember { mutableStateOf(false) }
+
     var showAvatarPicker by remember { mutableStateOf(false) }
 
     val avatarsMap = lobbyState?.avatars
     val currentUsername = userSessionVm.username.value
+
+
 
 // Zeit der letzten Interaktion
     var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
 
 // Dialog anzeigen
     var showIdleDialog by remember { mutableStateOf(false) }
+    var showSettingsMenu by remember { mutableStateOf(false) }
+
 
 
 
@@ -73,17 +77,30 @@ fun LobbyScreen(
     }
     // lobbyStatus holen + websocket verbinden
     LaunchedEffect(gameId) {
+
         lobbyVm.fetchLobbyStatus(gameId)
+
+        // Mit der Lobby verbinden
         lobbyVm.connectToLobby(
             gameId,
+            context = context,
             onConnected = {
-                if (!toastShown) {
-                    Toast.makeText(context, "WebSocket verbunden", Toast.LENGTH_SHORT).show()
-                    toastShown = true
+
+                val player = userSessionVm.username.value
+                if (!player.isNullOrBlank()) {
+                    lobbyVm.sendPingToLobby(gameId, player)
                 }
             }
         )
+
+        // Sofortigen Ping ohne Callback senden
+        val player = userSessionVm.username.value
+        if (!player.isNullOrBlank()) {
+            lobbyVm.sendPingToLobby(gameId, player)
+        }
     }
+
+
 
 
 
@@ -138,7 +155,7 @@ fun LobbyScreen(
         while (true) {
             delay(30_000) // alle 30 Sekunden
             val player = userSessionVm.username.value ?: continue
-            lobbyVm.sendPing(gameId, player)
+            lobbyVm.sendPingToLobby(gameId, player)
         }
     }
 
@@ -190,22 +207,46 @@ fun LobbyScreen(
                     )
                 },
                 actions = {
-                    TextButton(
-                        onClick = {
-                            lastInteractionTime = System.currentTimeMillis()
-                            val player = userSessionVm.username.value.orEmpty()
-                            lobbyVm.sendLeave(gameId, player) {
-                                onLeft()
+                    IconButton(onClick = { showSettingsMenu = true }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_settings),
+                            contentDescription = "Einstellungen"
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showSettingsMenu,
+                        onDismissRequest = { showSettingsMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Bot hinzufügen") },
+                            onClick = {
+                                showSettingsMenu = false
+                                lobbyVm.addBotToLobby(gameId)
                             }
-                        }
-                    )
-                    {
-                        Text(
-                            "Verlassen",
-                            color = Color.Black
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Bot entfernen") },
+                            onClick = {
+                                showSettingsMenu = false
+                                lobbyVm.removeBotFromLobby(gameId)
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Verlassen") },
+                            onClick = {
+                                showSettingsMenu = false
+                                val player = userSessionVm.username.value.orEmpty()
+                                lobbyVm.sendLeave(gameId, player) {
+                                    onLeft()
+                                }
+                            }
                         )
                     }
                 }
+
             )
 
 
@@ -359,6 +400,9 @@ fun LobbyScreen(
                         }
                     }
 
+
+
+
                     Button(
                         onClick = {
 
@@ -374,9 +418,6 @@ fun LobbyScreen(
                     ) {
                         Text("Avatar wählen")
                     }
-
-
-
 
                 }
             }

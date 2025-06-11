@@ -107,6 +107,8 @@ sonar {
 }
 
 dependencies {
+    implementation ("androidx.media3:media3-exoplayer:1.3.1")
+    implementation ("androidx.media3:media3-ui:1.3.1")
 
     // --- AndroidX Core & Lifecycle ---
     implementation(libs.androidx.core.ktx)
@@ -124,8 +126,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material3:material3:1.3.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
-    implementation("androidx.compose.runtime:runtime-livedata:1.6.0")
     implementation(libs.androidx.constraintlayout)
 
     // --- Navigation ---

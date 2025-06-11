@@ -2,18 +2,14 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 
 import GameViewModel
 import android.app.Activity
-import android.content.Context
-import android.content.res.Resources
-import android.graphics.Color.alpha
-import android.hardware.SensorManager
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -27,8 +23,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.with
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
@@ -43,56 +37,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
-import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.absoluteValue
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.geometry.Offset
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
-import at.aau.serg.websocketbrokerdemo.functions.ShakeDetector
+import androidx.compose.ui.text.font.FontWeight
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     gameId: String,
@@ -131,20 +105,74 @@ fun GameScreen(
 
     val isMyTurn = username == gameUpdate?.currentPlayer
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-
+    var isScrollingToMrX by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    var lastMrXPosition by remember { mutableStateOf<Int?>(null) }
+    var lastMyPosition by remember { mutableStateOf<Int?>(null) }
+    var showLeaveDialog by remember { mutableStateOf(false) }
+    var showMrXSurrenderedOverlay by remember { mutableStateOf(false) }
+    var showSettingsMenu by remember { mutableStateOf(false) }
+
+
 
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
         if (userSessionVm.role.value == "MRX") {
-            // For Mr. X, prioritize the dedicated mrXPosition if available
+
             val position = mrXPosition ?: gameUpdate?.playerPositions?.get(userSessionVm.getMrXName())
             position?.let { gameVm.pointPositions[it] }
         } else {
-            // For detectives, use their position from playerPositions
+
             gameUpdate?.playerPositions?.get(username)?.let { gameVm.pointPositions[it] }
         }
     }
+
+    fun scrollToPosition(positionId: Int, scope: CoroutineScope) {
+        val point = gameVm.pointPositions[positionId]
+        point?.let { (x, y) ->
+            val targetX = (x * gameVm.scale).toInt() - (screenWidth / 2)
+            val targetY = (y * gameVm.scale).toInt() - (screenHeight / 2)
+
+            scope.launch {
+                scrollStateX.animateScrollTo(targetX, animationSpec = tween(durationMillis = 1500))
+            }
+
+            scope.launch {
+                scrollStateY.animateScrollTo(targetY, animationSpec = tween(durationMillis = 1500))
+            }
+        }
+
+    }
+
+    LaunchedEffect(gameUpdate?.playerPositions) {
+        val mrXName = userSessionVm.getMrXName()
+        val currentMrXPosition = gameUpdate?.playerPositions?.get(mrXName)
+        val currentMyPosition = gameUpdate?.playerPositions?.get(username)
+
+        val mrXPositionChanged = currentMrXPosition != null && currentMrXPosition != -1 && currentMrXPosition != lastMrXPosition
+
+
+        if (mrXPositionChanged && !isScrollingToMrX && currentMyPosition != null) {
+            isScrollingToMrX = true
+
+            scrollToPosition(currentMrXPosition!!, coroutineScope)
+            lastMrXPosition = currentMrXPosition
+
+            delay(3000)
+
+
+            scrollToPosition(currentMyPosition, coroutineScope)
+            lastMyPosition = currentMyPosition
+
+            isScrollingToMrX = false
+        }
+        gameVm.fetchMrXHistory(gameId) { history ->
+            mrXHistory = history
+        }
+
+    }
+
+
+
 
     LaunchedEffect(myPosition, mrXPosition, gameVm.scale) {
 
@@ -153,13 +181,13 @@ fun GameScreen(
                 if (userSessionVm.role.value == "MRX") mrXPosition ?: myPosition else myPosition
 
             if (positionToFocus != null) {
-                // Leicht reinzoomen (z.B. auf 1.2f)
+
                 gameVm.scale = 1.2f.coerceIn(0.5f, 3f)
 
-                // Verzögerung für die Animation
+
                 delay(100)
 
-                // Zur eigenen Position scrollen (zentriert)
+
                 val point = gameVm.pointPositions[positionToFocus]
                 point?.let { (x, y) ->
                     val targetX = (x * gameVm.scale).toInt() - (screenWidth / 2)
@@ -184,10 +212,7 @@ fun GameScreen(
         if (username != null) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
-            gameVm.fetchMrXPosition(gameId, username)
             if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
-                //zuerst auf false, MrX setzt selber
                 gameVm.updateDoubleMoveMode(false)
             }
         }
@@ -197,11 +222,6 @@ fun GameScreen(
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
-            gameVm.fetchMrXPosition(gameId, username)
-            if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
-
-            }
         }
     }
 
@@ -228,16 +248,11 @@ fun GameScreen(
         if (username != null) {
 
             gameVm.fetchMrXPosition(gameId, username)
-            if (userSessionVm.role.value == "MRX") {
-                gameVm.fetchAllowedDoubleMoves(gameId, username)
-            }
             if (gameUpdate?.currentPlayer != username) {
                 gameVm.resetMoveModes()
             }
         }
-    }
-    //Verwendetes Ticket für 2 Sek einblenden
-    LaunchedEffect(gameUpdate) {
+
         val ticket = gameUpdate?.lastTicketUsed
         if (!ticket.isNullOrBlank()) {
             visibleTicket = ticket
@@ -246,24 +261,28 @@ fun GameScreen(
         }
     }
 
-    DisposableEffect(Unit) {
-        val shakeDetector = ShakeDetector(context).apply {
-            onShake = {
-                val fieldId = gameUpdate?.playerPositions?.get(username)
-                if (fieldId != null && username != null) {
-                    coroutineScope.launch {
-                        gameVm.onShakeDetected(context, gameId, username)
-                    }
-                }
+
+    LaunchedEffect(Unit) {
+        lobbyVm.setSystemMessageHandler { message ->
+            Log.d("SYSTEM_HANDLER", "Got system message: '$message'")
+            if (message == "mrX") {
+                showMrXSurrenderedOverlay = true
+            } else {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         }
+    }
 
-        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        shakeDetector.start()
-        onDispose {
-            sensorManager.unregisterListener(shakeDetector)
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000) // alle 30 Sekunden
+            val player = userSessionVm.username.value ?: continue
+            lobbyVm.sendPingToGame(gameId, player)
         }
     }
+
+
 
     Scaffold { padding ->
         Image(
@@ -297,6 +316,11 @@ fun GameScreen(
                 username = username
             )
 
+            MrXPositionOverlay(
+                playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
+                userSessionVm = userSessionVm
+            )
+
             val myTickets = gameUpdate?.ticketInventory?.get(username)
 
             if (myTickets != null) {
@@ -323,7 +347,7 @@ fun GameScreen(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp)
+                        .padding(top=60.dp,end = 16.dp)
                         .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
                         .padding(horizontal = 12.dp, vertical = 20.dp)
                 ) {
@@ -443,10 +467,19 @@ fun GameScreen(
                     currentPlayerRole = userSessionVm.role.value,
                     onDismiss = { navigateToLobby = true  },
                     userSessionVm = userSessionVm,
-                    playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
-                    gameUpdate = gameUpdate
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
                 )
             }
+
+            if (showMrXSurrenderedOverlay) {
+                MrXSurrenderedOverlay(
+                    onDismiss = {
+                        showMrXSurrenderedOverlay = false
+                        navigateToLobby = true
+                    }
+                )
+            }
+
 
             Box(modifier = Modifier
                 .padding(2.dp)
@@ -455,6 +488,12 @@ fun GameScreen(
             ){
                 Column {
                     Text(modifier = Modifier.padding(8.dp), text = "Rolle: ${userSessionVm.role.value}", color = Color.White)
+
+                    val currentRound = mrXHistory.lastOrNull()?.substringBefore(":") ?: "Runde 1"
+
+                    Text(modifier = Modifier.padding(8.dp),
+                        text = "$currentRound",
+                        color = Color.White)
                 }
             }
 
@@ -471,6 +510,8 @@ fun GameScreen(
                         .size(56.dp)
                         .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape),
                     contentAlignment = Alignment.Center
+
+
                 ) {
                     Image(
                         painter = painterResource(id = avatarRes),
@@ -482,6 +523,44 @@ fun GameScreen(
                     )
                 }
             }
+            Box(modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 80.dp, end = 16.dp)) {
+
+                IconButton(onClick = { showSettingsMenu = true }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_settings),
+                        contentDescription = "Einstellungen",
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showSettingsMenu,
+                    onDismissRequest = { showSettingsMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Spiel verlassen") },
+                        onClick = {
+                            showSettingsMenu = false
+                            val player = userSessionVm.username.value
+
+                            if (player != null) {
+                                gameVm.leaveGame(gameId, player) {
+                                    Log.d("STOMP", "Leave über Menü")
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        delay(1)
+                                        navigateToLobby = true
+                                    }
+                                }
+                            } else {
+                                navigateToLobby = true
+                            }
+                        }
+                    )
+                }
+            }
+
+
         }
     }
 }
@@ -505,7 +584,7 @@ private fun BoxScope.BottomBar(
 
     fun adjustZoom(newScale: Float) {
         playerPos?.let { (x, y) ->
-            val oldScale = gameVm.scale
+
             gameVm.scale = newScale.coerceIn(0.5f, 3f)
 
             // Scroll-Position berechnen und anpassen
@@ -541,7 +620,11 @@ private fun BoxScope.BottomBar(
                     }
                 }
             )
+
+
         }
+
+
     }
 
     Row(modifier = Modifier.align(Alignment.BottomEnd)) {
@@ -571,51 +654,6 @@ private fun BoxScope.BottomBar(
             Text(if (showMrXHistory) "Schließen" else "MrX Verlauf")
         }
 
-    }
-}
-
-@Composable
-fun BlackMoveModeButton(gameVm: GameViewModel) {
-    Box(
-        modifier = Modifier
-            .padding(8.dp)
-            .border(
-                width = if (gameVm.isBlackMoveMode) 3.dp else 0.dp,
-                color = if (gameVm.isBlackMoveMode) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable { gameVm.isBlackMoveMode = !gameVm.isBlackMoveMode }
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ticket_black),
-            contentDescription = "Black Move Mode"
-        )
-    }
-}
-
-@Composable
-fun SelectableDoubleTicket(
-    gameVm: GameViewModel,
-    onDoubleMoveSelected: (Boolean) -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .padding(8.dp)
-            .border(
-                width = if (gameVm.isDoubleMoveMode) 3.dp else 0.dp,
-                color = if (gameVm.isDoubleMoveMode) Color.Blue else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable {
-                val newState = !gameVm.isDoubleMoveMode
-                gameVm.isDoubleMoveMode = newState
-                onDoubleMoveSelected(newState)
-            }
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ticket_double),
-            contentDescription = null,
-        )
     }
 }
 
@@ -665,16 +703,6 @@ fun Map(
                 )
                 Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
                 PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition,gameUpdate)
-
-                val directionLabel by gameVm.shakeDirectionLabel.observeAsState()
-
-                DirectionArrowFromLabel(
-                    direction = directionLabel,
-                    fromField = gameUpdate?.playerPositions?.get(username),
-                    pointPositions = gameVm.pointPositions,
-                    scale = gameVm.scale
-                )
-
             }
         }
     }
@@ -744,7 +772,7 @@ private fun Stations(
                 DropdownMenu(
                     expanded = true,
                     onDismissRequest = { expandedStates[id] = false },
-                    modifier = Modifier.background(Color.White)
+                    modifier = Modifier.background(Color.Black.copy(alpha=0.85f))
                 ) {
                     movesForStation.forEach { move ->
 
@@ -762,11 +790,67 @@ private fun Stations(
                             }
                         }
 
-                        val context = LocalContext.current
-
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("${ticketType.substringBeforeLast("+")} → Station $targetStation")  },
+                                modifier = Modifier.height(40.dp),
+                                text= {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    ) {
+                                       
+                                        val ticketParts = ticketType.split("+")
+                                        val firstTicketBaseType = ticketParts.firstOrNull() ?: ""
+                                        val secondTicketBaseType = if (ticketParts.size > 1) ticketParts[1] else ""
+                                        val positionPart = if (ticketParts.size > 2 && ticketParts.last().startsWith("POS")) ticketParts.last() else ""
+
+
+                                        fun getImageResId(baseType: String): Int? {
+                                            return when (baseType) {
+                                                "BUS" -> R.drawable.ticket_bus
+                                                "TAXI" -> R.drawable.ticket_taxi
+                                                "UNDERGROUND" -> R.drawable.ticket_under
+                                                "BLACK" -> R.drawable.ticket_black
+                                                else -> null
+                                            }
+                                        }
+
+                                        getImageResId(firstTicketBaseType)?.let { resId ->
+                                            Image(
+                                                painter = painterResource(id = resId),
+                                                contentDescription = "$firstTicketBaseType Icon",
+                                                modifier = Modifier.size(36.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                        }
+
+                                        if (secondTicketBaseType.isNotEmpty() && secondTicketBaseType != positionPart && ticketParts.size > 1) {
+                                            getImageResId(secondTicketBaseType)?.let { resId ->
+                                                Image(
+                                                    painter = painterResource(id = resId),
+                                                    contentDescription = "$secondTicketBaseType Icon",
+                                                    modifier = Modifier.size(36.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        } else if (firstTicketBaseType.isNotEmpty() && secondTicketBaseType.isEmpty()) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
+
+                                        Text(
+                                            text = buildString {
+                                                if (positionPart.isNotEmpty()) {
+                                                    append(" ($positionPart)")
+                                                }
+                                                append(" → Station $targetStation")
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.White
+                                            )
+                                        )
+                                    }
+                                },
                                 onClick = {
                                     username?.let { name ->
                                         when {
@@ -777,14 +861,14 @@ private fun Stations(
                                                 gameVm.doubleMove(gameId, name, targetStation, blackTicket)
                                             }
                                             gameVm.isBlackMoveMode -> {
-                                                gameVm.blackMove(gameId, name, targetStation, ticketType, context)
+                                                gameVm.blackMove(gameId, name, targetStation, ticketType)
                                             }
                                             gameVm.isDoubleMoveMode -> {
                                                 gameVm.doubleMove(gameId, name, targetStation, ticketType)
                                             }
                                             else -> {
 
-                                                gameVm.move(gameId, name, targetStation, ticketType, context)
+                                                gameVm.move(gameId, name, targetStation, ticketType)
                                             }
                                         }
                                         expandedStates[id] = false
@@ -849,10 +933,6 @@ private fun PlayerPositions(
             val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
             val infiniteTransition = rememberInfiniteTransition(label = "pulsing")
-            val isCurrentPlayer = playerName == gameUpdate?.currentPlayer
-
-
-
 
             // 1. Animation für Skalierung (Pulsieren)
             val pulse by infiniteTransition.animateFloat(
@@ -864,7 +944,7 @@ private fun PlayerPositions(
                 )
             )
 
-// 2. Glow-Farbe
+            // 2. Glow-Farbe
             val glowColor = if (playerName == gameUpdate?.currentPlayer) Color.Yellow else Color.Transparent
 
             Box(
@@ -963,8 +1043,7 @@ fun WinnerOverlay(
     currentPlayerRole: String?,
     onDismiss: () -> Unit,
     userSessionVm: UserSessionViewModel,
-    playerPositions: Map<String, Int>,
-    gameUpdate: GameUpdate?
+    playerPositions: Map<String, Int>
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
@@ -989,13 +1068,6 @@ fun WinnerOverlay(
         isMrXWinner && !isCurrentPlayerMrX -> "Mr. X ist entkommen! Versucht es beim nächsten Mal besser!"
         !isMrXWinner && isCurrentPlayerMrX -> "Die Detectives haben dich gefangen!"
         else -> "Glückwunsch! Ihr habt Mr. X gefangen!"
-    }
-    val winnerIcons = if (isMrXWinner) {
-        listOf(R.drawable.mrx)
-    } else {
-        playerPositions.keys
-            .filterNot { userSessionVm.isMrX(it) }
-            .map { userSessionVm.getAvatarDrawableRes(it) }
     }
 
     Box(
@@ -1330,54 +1402,74 @@ fun TicketAnimatedButton(
 
 
 @Composable
-fun DirectionArrowFromLabel(
-    direction: String?,
-    fromField: Int?,
-    pointPositions: Map<Int, Pair<Int, Int>>,
-    scale: Float
+private fun BoxScope.MrXPositionOverlay(
+    playerPositions: Map<String, Int>,
+    userSessionVm: UserSessionViewModel
 ) {
-    if (direction.isNullOrBlank() || fromField == null) return
-    val from = pointPositions[fromField] ?: return
+    val mrXName = userSessionVm.getMrXName()
+    var currentMrXPosition by remember { mutableStateOf<Int?>(null) }
+    var showMrXPosition by remember { mutableStateOf(false) }
+    var lastDisplayedPosition by remember { mutableStateOf<Int?>(null) }
 
-    val density = LocalDensity.current
-    val base = Offset(from.first * scale, from.second * scale)
 
-    val lengthPx = with(density) { 1.0f * Resources.getSystem().displayMetrics.xdpi / 2.54f}   // ≈ 1 cm
-    val strokeWidthPx = with(density) { 0.3f * Resources.getSystem().displayMetrics.xdpi / 2.54f} // ≈ 3 mm
+    val newMrXPosition = playerPositions[mrXName]
 
-    val angleRad = when (direction.lowercase()) {
-        "Norden" -> -90f
-        "Nordost" -> -45f
-        "Osten" -> 0f
-        "Südost" -> 45f
-        "Süden" -> 90f
-        "Südwest" -> 135f
-        "Westen" -> 180f
-        "Nordwest" -> -135f
-        else -> null
-    }?.let { Math.toRadians(it.toDouble()).toFloat() } ?: return
 
-    val end = Offset(
-        base.x + lengthPx * cos(angleRad),
-        base.y + lengthPx * sin(angleRad)
+    LaunchedEffect(newMrXPosition) {
+        if (newMrXPosition != null && newMrXPosition != -1 && newMrXPosition != lastDisplayedPosition) {
+            currentMrXPosition = newMrXPosition
+            showMrXPosition = true
+            lastDisplayedPosition = newMrXPosition
+
+
+            delay(2000L)
+            showMrXPosition = false
+        }
+    }
+
+
+    val infiniteTransition = rememberInfiniteTransition()
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
     )
-    val arrowLength = strokeWidthPx * 2.5f
-    val arrowAngle1 = angleRad - Math.toRadians(30.0).toFloat()
-    val arrowAngle2 = angleRad + Math.toRadians(30.0).toFloat()
 
-    val arrowPoint1 = Offset(
-        end.x - arrowLength * cos(arrowAngle1),
-        end.y - arrowLength * sin(arrowAngle1)
-    )
-    val arrowPoint2 = Offset(
-        end.x - arrowLength * cos(arrowAngle2),
-        end.y - arrowLength * sin(arrowAngle2)
-    )
-    val arrowColor = Color(0xFF0E579B)
-    Canvas(modifier = Modifier.fillMaxSize().zIndex(10f)) {
-        drawLine(color = arrowColor, start = base, end = end, strokeWidth = strokeWidthPx)
-        drawLine(color = arrowColor, start = end, end = arrowPoint1, strokeWidth = strokeWidthPx)
-        drawLine(color = arrowColor, start = end, end = arrowPoint2, strokeWidth = strokeWidthPx)
+    AnimatedVisibility(
+        visible = showMrXPosition,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
+        modifier = Modifier.align(Alignment.Center)
+    ) {
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = pulse
+                    scaleY = pulse
+                }
+                .background(Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(12.dp))
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.mrx),
+                    contentDescription = "Mr. X",
+                    modifier = Modifier.size(32.dp)
+                )
+
+                Text(
+                    text = "Mr. X ist an Station $currentMrXPosition aufgetaucht!",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
-

@@ -2,11 +2,15 @@ package at.aau.serg.websocketbrokerdemo.data.api
 
 
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
+import at.aau.serg.websocketbrokerdemo.data.model.LeaveGameRequest
 
 import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
+import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 import retrofit2.http.Query
 
@@ -59,10 +63,11 @@ interface GameApi {
     @GET("/api/game/mrXhistory")
     suspend fun getMrXHistory(@Query("gameId") gameId: String): List<String>
 
-    @POST("api/game/cheat")
-    suspend fun shake(
-        @Query("gameId") gameId: String,
-        @Query("name") name: String
-    ): Int
+    @POST("api/game/{gameId}/leave")
+    suspend fun leaveGame(
+        @Path("gameId") gameId: String,
+        @Body request: LeaveGameRequest
+    ): Response<Unit>
+
 
 }

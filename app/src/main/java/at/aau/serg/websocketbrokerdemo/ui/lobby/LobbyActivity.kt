@@ -14,6 +14,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import at.aau.serg.websocketbrokerdemo.ui.OfflineStatusHandler
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import kotlinx.coroutines.launch
@@ -26,6 +27,8 @@ class LobbyActivity : ComponentActivity() {
             val lobbyVm: LobbyViewModel = viewModel()
             val userSessionVm: UserSessionViewModel = viewModel()
             val snackbarHostState = remember { SnackbarHostState() }
+
+            val isOffline by userSessionVm.isOffline
 
             var currentScreen by remember { mutableStateOf<LobbyScreenType>(LobbyScreenType.Menu) }
             var selectedGameId by remember { mutableStateOf<String?>(null) }
@@ -40,13 +43,19 @@ class LobbyActivity : ComponentActivity() {
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
 
-
-            // Username setzen beim Start
             LaunchedEffect(Unit) {
                 userSessionVm.username.value = usernameFromIntent
+                userSessionVm.startNetworkMonitor(applicationContext)
             }
 
-            // Falls eine Lobby erstellt wird → direkt in die Lobby springen
+            LaunchedEffect(isOffline) {
+                if (isOffline) {
+                    selectedGameId = null
+                    currentScreen = LobbyScreenType.Menu
+                }
+            }
+
+
             val createdLobby = lobbyVm.createdLobby.collectAsState().value
             LaunchedEffect(createdLobby) {
                 createdLobby?.let {
@@ -55,24 +64,28 @@ class LobbyActivity : ComponentActivity() {
                 }
             }
 
+
+
+
             when (currentScreen) {
-                LobbyScreenType.Menu -> LobbyMenuScreen(
-                    userSession = userSessionVm,
-                    onCreateLobby = { isPublic ->
-                        lobbyVm.createLobby(isPublic, userSessionVm.username.value.orEmpty())
-                    },
-                    onJoinLobby = { currentScreen = LobbyScreenType.Join },
-                    onFindPublicLobbies = { currentScreen = LobbyScreenType.Public }
-                )
+                LobbyScreenType.Menu -> OfflineStatusHandler(isOffline = isOffline) {
+                    LobbyMenuScreen(
+                        userSession = userSessionVm,
+                        onCreateLobby = { isPublic ->
+                            lobbyVm.createLobby(isPublic, userSessionVm.username.value.orEmpty())
+                        },
+                        onJoinLobby = { currentScreen = LobbyScreenType.Join },
+                        onFindPublicLobbies = { currentScreen = LobbyScreenType.Public }
+                    )
+                }
 
-                LobbyScreenType.Join -> {
+                LobbyScreenType.Join -> OfflineStatusHandler(isOffline = isOffline) {
                     val coroutineScope = rememberCoroutineScope()
-
                     JoinLobbyScreen(
                         onJoin = { id ->
                             val username = userSessionVm.username.value.orEmpty()
                             coroutineScope.launch {
-                                val result = lobbyVm.tryJoinLobby(id, username)
+                                val result = lobbyVm.tryJoinLobby(id, username, this@LobbyActivity)
                                 if (result.isNotBlank()) {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live
@@ -90,15 +103,13 @@ class LobbyActivity : ComponentActivity() {
                     )
                 }
 
-
-                LobbyScreenType.Public -> {
+                LobbyScreenType.Public -> OfflineStatusHandler(isOffline = isOffline) {
                     val coroutineScope = rememberCoroutineScope()
-
                     PublicLobbiesScreen(
                         onSelect = { id ->
                             val username = userSessionVm.username.value.orEmpty()
                             coroutineScope.launch {
-                                val result = lobbyVm.tryJoinLobby(id, username)
+                                val result = lobbyVm.tryJoinLobby(id, username, this@LobbyActivity)
                                 if (result.isNotBlank()) {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live
@@ -116,27 +127,30 @@ class LobbyActivity : ComponentActivity() {
                     )
                 }
 
-
                 LobbyScreenType.Live -> selectedGameId?.let { id ->
-                    LobbyScreen(
-                        gameId = id,
-                        lobbyVm = lobbyVm,
-                        userSessionVm = userSessionVm,
-                        onLeft = { currentScreen = LobbyScreenType.Menu },
-                        onGameStarted = {
-                            currentScreen = LobbyScreenType.Game
-                        }
-                    )
+                    OfflineStatusHandler(isOffline = isOffline) {
+                        LobbyScreen(
+                            gameId = id,
+                            lobbyVm = lobbyVm,
+                            userSessionVm = userSessionVm,
+                            onLeft = { currentScreen = LobbyScreenType.Menu },
+                            onGameStarted = {
+                                currentScreen = LobbyScreenType.Game
+                            }
+                        )
+                    }
                 }
 
-
                 LobbyScreenType.Game -> selectedGameId?.let { id ->
-                    GameScreen(
-                        gameId = id,
-                        lobbyVm = lobbyVm,
-                        userSessionVm = userSessionVm,
-                        gameVm = GameViewModel(context = this)
-                    )
+                    OfflineStatusHandler(isOffline = isOffline) {
+                        GameScreen(
+                            gameId = id,
+                            lobbyVm = lobbyVm,
+                            userSessionVm = userSessionVm,
+                            gameVm = GameViewModel(context = this)
+
+                        )
+                    }
                 }
             }
         }
