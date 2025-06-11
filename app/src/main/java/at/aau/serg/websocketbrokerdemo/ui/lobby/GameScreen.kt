@@ -354,12 +354,6 @@ fun GameScreen(
             showCheatArrow = false
             Log.d("SHAKE", "Zug vorbei – Cheat-Pfeil ausgeblendet")
         }
-
-        if (isMyTurn && !hasUsedCheat && !hasSeenCheatHint.value && userSessionVm.role.value != "MRX") {
-            delay(1500) //  verzögert
-            showCheatHint.value = true
-            hasSeenCheatHint.value = true
-        }
     }
 
 
@@ -517,7 +511,7 @@ fun GameScreen(
                                 )
                                 Spacer(Modifier.height(12.dp))
 
-                                mrXHistory.forEach { entry ->
+                                mrXHistory.reversed().forEach { entry ->
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
