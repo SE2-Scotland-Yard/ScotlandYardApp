@@ -45,7 +45,6 @@ fun AuthScreen(
     val context = LocalContext.current
     val authViewModel = remember { AuthViewModel() }
 
-    var feedback by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -138,7 +137,6 @@ fun AuthScreen(
                         keyboardController?.hide()
                         if (username.isNotBlank() && password.isNotBlank()) {
                             handleAuth(isLogin, username, password, authViewModel, userSession, context) {
-                                feedback = it.toString()
                                 onSuccess()
                             }
                         }
@@ -164,7 +162,6 @@ fun AuthScreen(
                         userSession,
                         context,
                         onSuccess = { result ->
-                            feedback = result.toString()
                             onSuccess()
                         }
                     )
