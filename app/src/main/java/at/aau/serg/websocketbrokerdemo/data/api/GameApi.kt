@@ -5,7 +5,6 @@ import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.data.model.LeaveGameRequest
 
 import at.aau.serg.websocketbrokerdemo.data.model.MoveResponse
-import at.aau.serg.websocketbrokerdemo.data.model.MrXDoubleMoveResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
