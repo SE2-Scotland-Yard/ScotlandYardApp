@@ -9,7 +9,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -161,7 +160,7 @@ fun AuthScreen(
                         authViewModel,
                         userSession,
                         context,
-                        onSuccess = { result ->
+                        onSuccess = { _ ->
                             onSuccess()
                         }
                     )
