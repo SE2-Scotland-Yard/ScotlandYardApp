@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -67,9 +68,16 @@ import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
+import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun GameScreen(
@@ -125,10 +133,16 @@ fun GameScreen(
     val hasSeenCheatHint = remember { mutableStateOf(false) }
     val showCheatHint = remember { mutableStateOf(false) }
 
+    var showLoadingOverlay by remember { mutableStateOf(true) }
 
 
-
-
+    //Launch für Bild StartScreen
+    /*
+    LaunchedEffect(Unit) {
+        delay(3000) // 3 Sekunden anzeigen
+        showLoadingOverlay = true
+    }
+*/
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
         if (userSessionVm.role.value == "MRX") {
 
@@ -362,7 +376,7 @@ fun GameScreen(
 
 
 
-    Scaffold { padding ->
+    Scaffold { paddingValues ->
         Image(
             modifier = Modifier.fillMaxSize(),
             painter = painterResource(R.drawable.background1),
@@ -371,7 +385,7 @@ fun GameScreen(
         )
         Box(
             modifier = Modifier
-                .padding(padding)
+                .padding(paddingValues)
         ) {
 
             Map(
@@ -708,6 +722,46 @@ fun GameScreen(
 
 
         }
+
+
+
+        AnimatedVisibility(
+            visible = showLoadingOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f)
+        ){
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(), contentAlignment = Alignment.Center
+
+            ) {
+                VideoPlayerComposable(
+                    videoUri = "file:///android_asset/loadingScreen.mp4",  // WICHTIG: MIT `.mp4`-Endung!
+                    modifier = Modifier.fillMaxWidth(),
+                    looping = false,
+                    onVideoEnd = {
+                        showLoadingOverlay = false
+                    }
+
+                )
+
+
+                //Bild vom StartScreen
+                /*
+                Image(
+                    painter = painterResource(R.drawable.loadingscreen),
+                    contentDescription = "Loading",
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentScale = ContentScale.FillBounds
+                )
+                */
+            }
+        }
+
     }
 }
 
@@ -1153,7 +1207,7 @@ private fun PlayerPositions(
             val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
             Image(
-                painter = painterResource(id = R.drawable.mrx), // Spezielles Mr. X Icon
+                painter = painterResource(id = R.drawable.mrx_shadow), // Spezielles Mr. X Icon
                 contentDescription = "Position von Mr. X",
                 modifier = Modifier
                     .size(iconSizeDp)
