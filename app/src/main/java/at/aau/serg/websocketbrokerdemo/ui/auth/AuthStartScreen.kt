@@ -29,7 +29,8 @@ import com.example.myapplication.R
 fun VideoPlayerComposable(
     videoUri: String,
     modifier: Modifier = Modifier,
-    looping: Boolean = true
+    looping: Boolean = false,
+    onVideoEnd: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val exoPlayer = remember {
@@ -40,6 +41,15 @@ fun VideoPlayerComposable(
             playWhenReady = true
             if (looping) {
                 repeatMode = ExoPlayer.REPEAT_MODE_ALL
+            } else {
+
+                addListener(object : androidx.media3.common.Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == ExoPlayer.STATE_ENDED) {
+                            onVideoEnd()
+                        }
+                    }
+                })
             }
         }
     }

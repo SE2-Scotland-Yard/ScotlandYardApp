@@ -3,10 +3,14 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 import GameViewModel
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.media.MediaPlayer
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RawRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -67,9 +71,16 @@ import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
+import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun GameScreen(
@@ -88,8 +99,7 @@ fun GameScreen(
 
 
     val playerPositions: Map<String, Int> = gameUpdate?.playerPositions ?: emptyMap()
-    val winner = gameUpdate?.winner
-
+    val winner: String = gameUpdate?.winner ?: "NONE"
     var navigateToLobby by remember { mutableStateOf(false) }
 
     var showMrXHistory by remember { mutableStateOf(false) }
@@ -125,10 +135,16 @@ fun GameScreen(
     val hasSeenCheatHint = remember { mutableStateOf(false) }
     val showCheatHint = remember { mutableStateOf(false) }
 
+    var showLoadingOverlay by remember { mutableStateOf(true) }
 
 
-
-
+    //Launch für Bild StartScreen
+    /*
+    LaunchedEffect(Unit) {
+        delay(3000) // 3 Sekunden anzeigen
+        showLoadingOverlay = true
+    }
+*/
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
         if (userSessionVm.role.value == "MRX") {
 
@@ -362,7 +378,7 @@ fun GameScreen(
 
 
 
-    Scaffold { padding ->
+    Scaffold { paddingValues ->
         Image(
             modifier = Modifier.fillMaxSize(),
             painter = painterResource(R.drawable.background1),
@@ -371,7 +387,7 @@ fun GameScreen(
         )
         Box(
             modifier = Modifier
-                .padding(padding)
+                .padding(paddingValues)
         ) {
 
             Map(
@@ -708,6 +724,46 @@ fun GameScreen(
 
 
         }
+
+
+
+        AnimatedVisibility(
+            visible = showLoadingOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f)
+        ){
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(), contentAlignment = Alignment.Center
+
+            ) {
+                VideoPlayerComposable(
+                    videoUri = "file:///android_asset/loadingScreen.mp4",  // WICHTIG: MIT `.mp4`-Endung!
+                    modifier = Modifier.fillMaxWidth(),
+                    looping = false,
+                    onVideoEnd = {
+                        showLoadingOverlay = false
+                    }
+
+                )
+
+
+                //Bild vom StartScreen
+                /*
+                Image(
+                    painter = painterResource(R.drawable.loadingscreen),
+                    contentDescription = "Loading",
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentScale = ContentScale.FillBounds
+                )
+                */
+            }
+        }
+
     }
 }
 
@@ -1062,11 +1118,26 @@ private fun PlayerPositions(
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+    var previousMrXShadowPosition by remember { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(playerPositions) {
         previousPlayerPositions = playerPositions
     }
 
+    fun playSound(context: Context, @RawRes soundResId: Int) {
+        try {
+            val mediaPlayer = MediaPlayer.create(context, soundResId)
+            mediaPlayer?.apply {
+                setOnCompletionListener { mp ->
+                    mp.release() // MediaPlayer freigeben, wenn der Sound beendet ist
+                }
+                start()
+            }
+        } catch (e: Exception) {
+            Log.e("SoundPlayback", "Fehler beim Abspielen des Sounds: ${e.message}")
+        }
+    }
 
     fun getIconForPlayer(name: String): Int {
         return if (userSessionVm.isMrX(name)) {
@@ -1145,6 +1216,18 @@ private fun PlayerPositions(
     val mrXPos = playerPositions[userSessionVm.getMrXName()]
 
     mrXPos?.let { positionId ->
+        LaunchedEffect(positionId) {
+            if (previousMrXShadowPosition != null && previousMrXShadowPosition != positionId) {
+
+                playSound(context, R.raw.mrx_appear)
+                Log.d("MrXShadow", "Position des Mr. X Schattens geändert zu $positionId. Bewegungssound wird abgespielt.")
+            } else if (previousMrXShadowPosition == null) {
+                playSound(context, R.raw.mrx_appear)
+                Log.d("MrXShadow", "Mr. X Schatten erschien bei $positionId. Erscheinungssound wird abgespielt.")
+            }
+
+            previousMrXShadowPosition = positionId
+        }
         points[positionId]?.let { (xPx, yPx) ->
             val animatedX by animateFloatAsState(targetValue = xPx.toFloat(), animationSpec = tween(1000))
             val animatedY by animateFloatAsState(targetValue = yPx.toFloat(), animationSpec = tween(1000))
@@ -1153,7 +1236,7 @@ private fun PlayerPositions(
             val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
 
             Image(
-                painter = painterResource(id = R.drawable.mrx), // Spezielles Mr. X Icon
+                painter = painterResource(id = R.drawable.mrx_shadow), // Spezielles Mr. X Icon
                 contentDescription = "Position von Mr. X",
                 modifier = Modifier
                     .size(iconSizeDp)

@@ -28,6 +28,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import at.aau.serg.websocketbrokerdemo.viewmodel.AuthViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
@@ -126,6 +127,7 @@ fun AuthScreen(
                 onValueChange = { if (it.length <= 20) password = it },
                 label = { Text("Passwort") },
                 singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier
                     .width(320.dp)
                     .focusRequester(passwordFocusRequester),
