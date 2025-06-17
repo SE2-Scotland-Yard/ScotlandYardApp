@@ -15,12 +15,13 @@ class GameRepository(
         .build()
         .create(GameApi::class.java)
 ) {
+    val unknownError = "Unbekannter Fehler"
 
     suspend fun move(gameId: String, name: String, to: Int, gotTicket: String): String {
         return try {
             api.move(gameId, name, to, gotTicket).message
         } catch (e: Exception) {
-            "Zug fehlgeschlagen: ${e.localizedMessage ?: "Unbekannter Fehler"}"
+            "Zug fehlgeschlagen: ${e.localizedMessage ?: unknownError}"
         }
     }
 
@@ -28,7 +29,7 @@ class GameRepository(
         return try {
             api.blackMove(gameId, name, to, gotTicket).message
         } catch (e: Exception) {
-            "Black Move fehlgeschlagen: ${e.localizedMessage ?: "Unbekannter Fehler"}"
+            "Black Move fehlgeschlagen: ${e.localizedMessage ?: unknownError}"
         }
     }
 
@@ -60,7 +61,7 @@ class GameRepository(
         return try {
             api.moveDouble(gameId, name, to, gotTicket).message
         } catch (e: Exception) {
-            "Doppelzug fehlgeschlagen: ${e.localizedMessage ?: "Unbekannter Fehler"}"
+            "Doppelzug fehlgeschlagen: ${e.localizedMessage ?: unknownError}"
         }
     }
 

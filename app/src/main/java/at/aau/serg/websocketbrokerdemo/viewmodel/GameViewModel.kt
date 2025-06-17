@@ -13,7 +13,6 @@ import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 

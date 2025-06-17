@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,7 +45,6 @@ fun AuthScreen(
     val context = LocalContext.current
     val authViewModel = remember { AuthViewModel() }
 
-    var feedback by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -80,7 +79,7 @@ fun AuthScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Zurück")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
             }
         }
 
@@ -139,7 +138,6 @@ fun AuthScreen(
                         keyboardController?.hide()
                         if (username.isNotBlank() && password.isNotBlank()) {
                             handleAuth(isLogin, username, password, authViewModel, userSession, context) {
-                                feedback = it.toString()
                                 onSuccess()
                             }
                         }
@@ -164,8 +162,7 @@ fun AuthScreen(
                         authViewModel,
                         userSession,
                         context,
-                        onSuccess = { result ->
-                            feedback = result.toString()
+                        onSuccess = { _ ->
                             onSuccess()
                         }
                     )
