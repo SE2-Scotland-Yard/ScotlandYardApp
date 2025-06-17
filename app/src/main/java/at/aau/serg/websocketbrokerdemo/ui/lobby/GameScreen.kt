@@ -99,8 +99,7 @@ fun GameScreen(
 
 
     val playerPositions: Map<String, Int> = gameUpdate?.playerPositions ?: emptyMap()
-    val winner = gameUpdate?.winner
-
+    val winner: String = gameUpdate?.winner ?: "NONE"
     var navigateToLobby by remember { mutableStateOf(false) }
 
     var showMrXHistory by remember { mutableStateOf(false) }
