@@ -3,11 +3,14 @@ package at.aau.serg.websocketbrokerdemo.ui.lobby
 import GameViewModel
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RawRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -1116,11 +1119,26 @@ private fun PlayerPositions(
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+    var previousMrXShadowPosition by remember { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(playerPositions) {
         previousPlayerPositions = playerPositions
     }
 
+    fun playSound(context: Context, @RawRes soundResId: Int) {
+        try {
+            val mediaPlayer = MediaPlayer.create(context, soundResId)
+            mediaPlayer?.apply {
+                setOnCompletionListener { mp ->
+                    mp.release() // MediaPlayer freigeben, wenn der Sound beendet ist
+                }
+                start()
+            }
+        } catch (e: Exception) {
+            Log.e("SoundPlayback", "Fehler beim Abspielen des Sounds: ${e.message}")
+        }
+    }
 
     fun getIconForPlayer(name: String): Int {
         return if (userSessionVm.isMrX(name)) {
@@ -1199,6 +1217,18 @@ private fun PlayerPositions(
     val mrXPos = playerPositions[userSessionVm.getMrXName()]
 
     mrXPos?.let { positionId ->
+        LaunchedEffect(positionId) {
+            if (previousMrXShadowPosition != null && previousMrXShadowPosition != positionId) {
+
+                playSound(context, R.raw.mrx_appear)
+                Log.d("MrXShadow", "Position des Mr. X Schattens geändert zu $positionId. Bewegungssound wird abgespielt.")
+            } else if (previousMrXShadowPosition == null) {
+                playSound(context, R.raw.mrx_appear)
+                Log.d("MrXShadow", "Mr. X Schatten erschien bei $positionId. Erscheinungssound wird abgespielt.")
+            }
+
+            previousMrXShadowPosition = positionId
+        }
         points[positionId]?.let { (xPx, yPx) ->
             val animatedX by animateFloatAsState(targetValue = xPx.toFloat(), animationSpec = tween(1000))
             val animatedY by animateFloatAsState(targetValue = yPx.toFloat(), animationSpec = tween(1000))
