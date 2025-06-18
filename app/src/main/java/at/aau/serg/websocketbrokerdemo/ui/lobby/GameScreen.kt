@@ -7,7 +7,6 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.MediaPlayer
-import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RawRes
@@ -71,11 +70,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 
@@ -137,14 +132,6 @@ fun GameScreen(
 
     var showLoadingOverlay by remember { mutableStateOf(true) }
 
-
-    //Launch für Bild StartScreen
-    /*
-    LaunchedEffect(Unit) {
-        delay(3000) // 3 Sekunden anzeigen
-        showLoadingOverlay = true
-    }
-*/
     val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
         if (userSessionVm.role.value == "MRX") {
 
@@ -749,18 +736,6 @@ fun GameScreen(
                     }
 
                 )
-
-
-                //Bild vom StartScreen
-                /*
-                Image(
-                    painter = painterResource(R.drawable.loadingscreen),
-                    contentDescription = "Loading",
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    contentScale = ContentScale.FillBounds
-                )
-                */
             }
         }
 
@@ -885,6 +860,7 @@ fun Map(
     val virtualHeightDp = with(density) { (intrinsicSize.height * gameVm.scale).toDp() }
 
     val myPosition = gameUpdate?.playerPositions?.get(username)
+    val extraScrollPadding = 50.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -897,7 +873,8 @@ fun Map(
 
             Box(
                 modifier = Modifier
-                    .size(virtualWidthDp, virtualHeightDp)
+                    .size(virtualWidthDp + extraScrollPadding * 2, virtualHeightDp + extraScrollPadding * 2)
+                    .padding(extraScrollPadding)
             ) {
                 //INFO: hier kommt alles rein, ws mit der Map Skalieren soll
 
