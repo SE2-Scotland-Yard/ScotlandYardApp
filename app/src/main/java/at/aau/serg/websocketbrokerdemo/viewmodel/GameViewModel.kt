@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
-import at.aau.serg.websocketbrokerdemo.viewmodel.Ticket
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,8 +27,6 @@ class GameViewModel(
 
     var mrXPosition :Int? by mutableStateOf(null)
 
-    var allowedMovesDetails:AllowedMoveResponse? by mutableStateOf(null)
-
     var allowedMoves: List<AllowedMoveResponse> by mutableStateOf(emptyList())
 
     var allowedDoubleMoves: List<AllowedMoveResponse> by mutableStateOf(emptyList())
@@ -40,8 +37,6 @@ class GameViewModel(
     val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions(context)
 
     var scale : Float by mutableFloatStateOf(1f)
-
-    var selectedTicket : Ticket? by mutableStateOf(null)
 
     var selectedStation : Int by mutableIntStateOf(0)
 
@@ -118,27 +113,6 @@ class GameViewModel(
             }
         }
     }
-
-    fun increaseZoom(){
-        scale += 0.1f
-    }
-
-    fun decreaseZoom(){
-        scale -= 0.1f
-    }
-
-    var onZoomChanged: ((Float, Float) -> Unit)? = null
-
-    fun increaseZoom(playerX: Float, playerY: Float) {
-        scale = (scale + 0.1f).coerceIn(0.5f, 3f)
-        onZoomChanged?.invoke(playerX, playerY)
-    }
-
-    fun decreaseZoom(playerX: Float, playerY: Float) {
-        scale = (scale - 0.1f).coerceIn(0.5f, 3f)
-        onZoomChanged?.invoke(playerX, playerY)
-    }
-
 
     fun fetchMrXHistory(gameId: String, onResult: (List<String>) -> Unit) {
         viewModelScope.launch {
