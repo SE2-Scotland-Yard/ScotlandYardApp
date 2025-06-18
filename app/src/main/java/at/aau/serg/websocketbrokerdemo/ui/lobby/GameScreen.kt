@@ -48,6 +48,7 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,6 +71,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
@@ -78,6 +80,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
+import kotlin.math.roundToInt
 
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -886,6 +889,9 @@ fun Map(
 
     val myPosition = gameUpdate?.playerPositions?.get(username)
 
+    val coroutineScope = rememberCoroutineScope()
+
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         Box(
@@ -893,6 +899,38 @@ fun Map(
                 .horizontalScroll(scrollStateX)
                 .verticalScroll(scrollStateY)
                 .align(Alignment.Center)
+                .pointerInput(Unit) {
+                    detectTransformGestures { centroid, pan, zoom, rotation ->
+                        val newScale = (gameVm.scale * zoom).coerceIn(0.5f, 3f)
+
+                        val currentScrollX = scrollStateX.value
+                        val currentScrollY = scrollStateY.value
+
+                        val oldWidth = size.width.toFloat() * gameVm.scale
+                        val oldHeight = size.height.toFloat() * gameVm.scale
+                        val newWidth = size.width.toFloat() * newScale
+                        val newHeight = size.height.toFloat() * newScale
+
+                        val offsetX =
+                            (centroid.x + currentScrollX) * (newWidth / oldWidth) - centroid.x
+                        val offsetY =
+                            (centroid.y + currentScrollY) * (newHeight / oldHeight) - centroid.y
+
+                        gameVm.scale = newScale
+
+                        coroutineScope.launch {
+                            scrollStateX.scrollTo(offsetX.roundToInt())
+                        }
+                        coroutineScope.launch {
+                            scrollStateY.scrollTo(offsetY.roundToInt())
+                        }
+                        coroutineScope.launch {
+                            scrollStateX.scrollTo((scrollStateX.value - pan.x).roundToInt())
+                            scrollStateY.scrollTo((scrollStateY.value - pan.y).roundToInt())
+                        }
+                    }
+                }
+
         ) {
 
             Box(
