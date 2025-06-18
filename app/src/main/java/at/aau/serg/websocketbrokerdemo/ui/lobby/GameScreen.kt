@@ -7,7 +7,7 @@ import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.MediaPlayer
-import android.net.Uri
+
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RawRes
@@ -33,7 +33,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -48,7 +48,7 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -70,14 +70,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
+
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
+
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
+
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
+import androidx.compose.ui.unit.IntSize
+
 
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -159,8 +161,8 @@ fun GameScreen(
     fun scrollToPosition(positionId: Int, scope: CoroutineScope) {
         val point = gameVm.pointPositions[positionId]
         point?.let { (x, y) ->
-            val targetX = (x * gameVm.scale).toInt() - (screenWidth / 2)
-            val targetY = (y * gameVm.scale).toInt() - (screenHeight / 2)
+            val targetX = x - (screenWidth / 2)
+            val targetY = y - (screenHeight / 2)
 
             scope.launch {
                 scrollStateX.animateScrollTo(targetX, animationSpec = tween(durationMillis = 1500))
@@ -170,8 +172,8 @@ fun GameScreen(
                 scrollStateY.animateScrollTo(targetY, animationSpec = tween(durationMillis = 1500))
             }
         }
-
     }
+
 
     LaunchedEffect(gameUpdate?.playerPositions) {
         val mrXName = userSessionVm.getMrXName()
@@ -276,8 +278,7 @@ fun GameScreen(
                     val targetX = (x * gameVm.scale).toInt() - (screenWidth / 2)
                     val targetY = (y * gameVm.scale).toInt() - (screenHeight / 2)
 
-                    scrollStateX.scrollTo(targetX)
-                    scrollStateY.scrollTo(targetY)
+
                 }
 
                 isInitialized = true
@@ -400,8 +401,6 @@ fun GameScreen(
                 isMyTurn = isMyTurn,
                 userSessionVm = userSessionVm,
                 mrXPosition = mrXPosition,
-                scrollStateX = scrollStateX,
-                scrollStateY = scrollStateY,
                 gameUpdate = gameUpdate,
                 showCheatArrow = showCheatArrow,
                 mrxXY = mrxXY
@@ -419,8 +418,7 @@ fun GameScreen(
                     }
                     showMrXHistory = !showMrXHistory
                 },
-                scrollStateX = scrollStateX,
-                scrollStateY = scrollStateY,
+
                 playerPos = playerPos,
                 gameId = gameId,
                 username = username
@@ -773,29 +771,20 @@ private fun BoxScope.BottomBar(
     userSessionVm: UserSessionViewModel,
     showMrXHistory: Boolean,
     onToggleHistory: () -> Unit,
-    scrollStateX: ScrollState,
-    scrollStateY: ScrollState,
     playerPos: Pair<Int, Int>?,
     gameId: String,
     username: String?
 
 ) {
-    val context = LocalContext.current
-    val screenWidth = remember { context.resources.displayMetrics.widthPixels }
-    val screenHeight = remember { context.resources.displayMetrics.heightPixels }
 
     fun adjustZoom(newScale: Float) {
         playerPos?.let { (x, y) ->
 
             gameVm.scale = newScale.coerceIn(0.5f, 3f)
 
-            // Scroll-Position berechnen und anpassen
-            val targetX = (x * gameVm.scale).toInt() - screenWidth / 2
-            val targetY = (y * gameVm.scale).toInt() - screenHeight / 2
 
             CoroutineScope(Dispatchers.Main).launch {
-                scrollStateX.scrollTo(targetX)
-                scrollStateY.scrollTo(targetY)
+
             }
         }
     }
@@ -864,69 +853,107 @@ fun Map(
     gameVm: GameViewModel,
     useSmallMap: Boolean,
     allowedMoves: List<AllowedMoveResponse>,
-    gameId:String,
+    gameId: String,
     username: String?,
     playerPositions: Map<String, Int>,
-    isMyTurn : Boolean,
+    isMyTurn: Boolean,
     userSessionVm: UserSessionViewModel,
     mrXPosition: Int?,
-    scrollStateX: ScrollState,
-    scrollStateY: ScrollState,
     gameUpdate: GameUpdate?,
     mrxXY: Pair<Float, Float>,
     showCheatArrow: Boolean
 ) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
     val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
-    val intrinsicSize = mapPainter.intrinsicSize
+    val tablePainter = painterResource(id = R.drawable.table) // Dein neuer Tisch
     val points = gameVm.pointPositions
 
-    val density = LocalDensity.current
-    val virtualWidthDp = with(density) { (intrinsicSize.width * gameVm.scale).toDp() }
-    val virtualHeightDp = with(density) { (intrinsicSize.height * gameVm.scale).toDp() }
+    val mapWidthPx = mapPainter.intrinsicSize.width
+    val mapHeightPx = mapPainter.intrinsicSize.height
+    val aspectRatio = mapWidthPx / mapHeightPx
 
-    val myPosition = gameUpdate?.playerPositions?.get(username)
+    var renderedSize by remember { mutableStateOf(IntSize.Zero) }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        Box(
-            modifier = Modifier
-                .horizontalScroll(scrollStateX)
-                .verticalScroll(scrollStateY)
-                .align(Alignment.Center)
-        ) {
 
+        Image(
+            painter = tablePainter,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+
+        ZoomableMapWrapper(
+            scale = gameVm.scale,
+            onScaleChange = { gameVm.scale = it }
+        ) {
             Box(
                 modifier = Modifier
-                    .size(virtualWidthDp, virtualHeightDp)
+                    .size(3000.dp)
             ) {
-                //INFO: hier kommt alles rein, ws mit der Map Skalieren soll
 
-                Image(
-                    painter = mapPainter,
-                    contentDescription = "Map",
-                    contentScale = ContentScale.FillBounds,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Stations(gameVm, points, density, allowedMoves, gameId,username,isMyTurn)
-                PlayerPositions(gameVm,points,density, playerPositions,userSessionVm,mrXPosition,gameUpdate)
-
-                //pfeil zeigen(mitskaliert mit der map)
-                if (showCheatArrow && myPosition != null) {
-                    val pointPositions = gameVm.repository.getPointPositions(LocalContext.current)
-                    val myXYRaw = pointPositions[myPosition] ?: Pair(0, 0)
-                    val myXY = Pair(myXYRaw.first.toFloat(), myXYRaw.second.toFloat())
-
-                    CheatArrow(
-                        myXY = myXY,
-                        mrxXY = mrxXY,
-                        scale = gameVm.scale
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .aspectRatio(aspectRatio)
+                        .onGloballyPositioned { coordinates ->
+                            renderedSize = coordinates.size
+                        }
+                ) {
+                    Image(
+                        painter = mapPainter,
+                        contentDescription = "Map",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
                     )
-                }
 
+                    val scaleMapX = renderedSize.width / mapWidthPx
+                    val scaleMapY = renderedSize.height / mapHeightPx
+
+                    Stations(
+                        gameVm = gameVm,
+                        points = points,
+                        density = density,
+                        allowedMoves = allowedMoves,
+                        gameId = gameId,
+                        username = username,
+                        isMyTurn = isMyTurn,
+                        scaleX = scaleMapX,
+                        scaleY = scaleMapY
+                    )
+
+                    PlayerPositions(
+                        gameVm = gameVm,
+                        points = points,
+                        density = density,
+                        playerPositions = playerPositions,
+                        userSessionVm = userSessionVm,
+                        mrXPosition = mrXPosition,
+                        gameUpdate = gameUpdate,
+                        scaleMapX = scaleMapX,
+                        scaleMapY = scaleMapY
+                    )
+
+                    if (showCheatArrow && username != null) {
+                        val myPos = gameUpdate?.playerPositions?.get(username)
+                        val pointPositions = gameVm.repository.getPointPositions(context)
+                        val myXYRaw = myPos?.let { pointPositions[it] } ?: Pair(0, 0)
+                        val myXY = Pair(myXYRaw.first.toFloat(), myXYRaw.second.toFloat())
+
+                        CheatArrow(myXY = myXY, mrxXY = mrxXY, scale = 1f)
+                    }
+                }
             }
         }
     }
 }
+
+
+
+
 
 @Composable
 private fun Stations(
@@ -936,7 +963,9 @@ private fun Stations(
     allowedMoves: List<AllowedMoveResponse>,
     gameId: String,
     username: String?,
-    isMyTurn : Boolean
+    isMyTurn : Boolean,
+    scaleX: Float,
+    scaleY: Float
 ) {
     if (!isMyTurn) return
     val buttonSizeDp = (1 * gameVm.scale).dp
@@ -949,8 +978,9 @@ private fun Stations(
 
     points.forEach { (id, pos) ->
         val (xPx, yPx) = pos
-        val xDp = with(density) { (xPx * gameVm.scale).toDp() }
-        val yDp = with(density) { (yPx * gameVm.scale).toDp() }
+        val xDp = with(density) { (xPx * scaleX).toDp() }
+        val yDp = with(density) { (yPx * scaleY).toDp() }
+
 
         // Filter moves that involve the current station
         val movesForStation = movesToShow.filter { move ->
@@ -1112,9 +1142,12 @@ private fun PlayerPositions(
     playerPositions: Map<String, Int>,
     userSessionVm: UserSessionViewModel,
     mrXPosition: Int?,
-    gameUpdate: GameUpdate?
+    gameUpdate: GameUpdate?,
+    scaleMapX: Float,
+    scaleMapY: Float
 ) {
-    val iconSizeDp = (40 * gameVm.scale).dp
+    val iconSizeDp = (60 / gameVm.scale).dp.coerceIn(30.dp, 60.dp)
+
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
@@ -1129,9 +1162,7 @@ private fun PlayerPositions(
         try {
             val mediaPlayer = MediaPlayer.create(context, soundResId)
             mediaPlayer?.apply {
-                setOnCompletionListener { mp ->
-                    mp.release() // MediaPlayer freigeben, wenn der Sound beendet ist
-                }
+                setOnCompletionListener { mp -> mp.release() }
                 start()
             }
         } catch (e: Exception) {
@@ -1147,29 +1178,25 @@ private fun PlayerPositions(
         }
     }
 
-
     playerPositions.forEach { (playerName, positionId) ->
         if (userSessionVm.isMrX(playerName)) return@forEach
-        points[positionId]?.let { (xPx, yPx) ->
 
+        points[positionId]?.let { (xPx, yPx) ->
             val animatedX by animateFloatAsState(
                 targetValue = xPx.toFloat(),
-                animationSpec = tween(durationMillis = 1000),
-                label = "xAnimation_$playerName"
+                animationSpec = tween(1000),
+                label = "x_$playerName"
             )
-
             val animatedY by animateFloatAsState(
                 targetValue = yPx.toFloat(),
-                animationSpec = tween(durationMillis = 1000),
-                label = "yAnimation_$playerName"
+                animationSpec = tween(1000),
+                label = "y_$playerName"
             )
 
-            val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
-            val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
+            val positionXDp: Dp = with(density) { (animatedX * scaleMapX).toDp() }
+            val positionYDp: Dp = with(density) { (animatedY * scaleMapY).toDp() }
 
-            val infiniteTransition = rememberInfiniteTransition(label = "pulsing")
-
-            // 1. Animation für Skalierung (Pulsieren)
+            val infiniteTransition = rememberInfiniteTransition(label = "pulse_$playerName")
             val pulse by infiniteTransition.animateFloat(
                 initialValue = 1f,
                 targetValue = if (playerName == gameUpdate?.currentPlayer) 1.2f else 1f,
@@ -1179,15 +1206,11 @@ private fun PlayerPositions(
                 )
             )
 
-            // 2. Glow-Farbe
             val glowColor = if (playerName == gameUpdate?.currentPlayer) Color.Yellow else Color.Transparent
 
             Box(
                 modifier = Modifier
-                    .offset(
-                        x = displayX - iconSizeDp / 2,
-                        y = displayY - iconSizeDp / 2
-                    )
+                    .offset(positionXDp - iconSizeDp / 2, positionYDp - iconSizeDp / 2)
                     .graphicsLayer {
                         scaleX = pulse
                         scaleY = pulse
@@ -1195,12 +1218,12 @@ private fun PlayerPositions(
                         shape = CircleShape
                         clip = false
                     }
-                    .background(glowColor.copy(alpha = 0.4f), shape = CircleShape)
+                    .background(glowColor.copy(alpha = 0.4f), CircleShape)
                     .size(iconSizeDp)
                     .zIndex(1f)
             ) {
                 Image(
-                    painter = painterResource(id = getIconForPlayer(playerName)),
+                    painter = painterResource(getIconForPlayer(playerName)),
                     contentDescription = "Position von $playerName",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
@@ -1208,39 +1231,35 @@ private fun PlayerPositions(
             }
 
             LaunchedEffect(positionId) {
-                lastPlayerPositions = lastPlayerPositions + (playerName to (xPx.toFloat() to yPx.toFloat()))
+                lastPlayerPositions = lastPlayerPositions + (playerName to (animatedX to animatedY))
             }
         }
     }
 
-    val mrXPos = playerPositions[userSessionVm.getMrXName()]
 
-    mrXPos?.let { positionId ->
+    playerPositions[userSessionVm.getMrXName()]?.let { positionId ->
         LaunchedEffect(positionId) {
             if (previousMrXShadowPosition != null && previousMrXShadowPosition != positionId) {
-
                 playSound(context, R.raw.mrx_appear)
-                Log.d("MrXShadow", "Position des Mr. X Schattens geändert zu $positionId. Bewegungssound wird abgespielt.")
             } else if (previousMrXShadowPosition == null) {
                 playSound(context, R.raw.mrx_appear)
-                Log.d("MrXShadow", "Mr. X Schatten erschien bei $positionId. Erscheinungssound wird abgespielt.")
             }
-
             previousMrXShadowPosition = positionId
         }
+
         points[positionId]?.let { (xPx, yPx) ->
             val animatedX by animateFloatAsState(targetValue = xPx.toFloat(), animationSpec = tween(1000))
             val animatedY by animateFloatAsState(targetValue = yPx.toFloat(), animationSpec = tween(1000))
 
-            val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
-            val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
+            val xDp = with(density) { (animatedX * scaleMapX).toDp() }
+            val yDp = with(density) { (animatedY * scaleMapY).toDp() }
 
             Image(
-                painter = painterResource(id = R.drawable.mrx_shadow), // Spezielles Mr. X Icon
-                contentDescription = "Position von Mr. X",
+                painter = painterResource(R.drawable.mrx_shadow),
+                contentDescription = "Position von Mr. X (Schatten)",
                 modifier = Modifier
                     .size(iconSizeDp)
-                    .offset(displayX - (iconSizeDp * 1.2f) / 2, displayY - (iconSizeDp * 1.2f) / 2),
+                    .offset(xDp - (iconSizeDp * 1.2f) / 2, yDp - (iconSizeDp * 1.2f) / 2),
                 contentScale = ContentScale.Fit
             )
         }
@@ -1250,33 +1269,21 @@ private fun PlayerPositions(
     if (userSessionVm.role.value == "MRX") {
         mrXPosition?.let { positionId ->
             points[positionId]?.let { (xPx, yPx) ->
+                val animatedX by animateFloatAsState(targetValue = xPx.toFloat(), animationSpec = tween(1000))
+                val animatedY by animateFloatAsState(targetValue = yPx.toFloat(), animationSpec = tween(1000))
 
-                val animatedX by animateFloatAsState(
-                    targetValue = xPx.toFloat(),
-                    animationSpec = tween(durationMillis = 1000),
-                    label = "xAnimation_MrX"
-                )
-
-                val animatedY by animateFloatAsState(
-                    targetValue = yPx.toFloat(),
-                    animationSpec = tween(durationMillis = 1000),
-                    label = "yAnimation_MrX"
-                )
-
-                val displayX = with(density) { (animatedX * gameVm.scale).toDp() }
-                val displayY = with(density) { (animatedY * gameVm.scale).toDp() }
+                val xDp = with(density) { (animatedX * scaleMapX).toDp() }
+                val yDp = with(density) { (animatedY * scaleMapY).toDp() }
 
                 Image(
-                    painter = painterResource(id = R.drawable.mrx),
+                    painter = painterResource(R.drawable.mrx),
                     contentDescription = "Position von Mr.X",
                     modifier = Modifier
                         .size(iconSizeDp)
-                        .offset(
-                            x = displayX - iconSizeDp / 2,
-                            y = displayY - iconSizeDp / 2
-                        ),
+                        .offset(xDp - iconSizeDp / 2, yDp - iconSizeDp / 2),
                     contentScale = ContentScale.Fit
                 )
+
                 LaunchedEffect(positionId) {
                     lastMrXPosition = xPx.toFloat() to yPx.toFloat()
                 }
@@ -1284,6 +1291,7 @@ private fun PlayerPositions(
         }
     }
 }
+
 @Composable
 fun WinnerOverlay(
     winner: String?,
