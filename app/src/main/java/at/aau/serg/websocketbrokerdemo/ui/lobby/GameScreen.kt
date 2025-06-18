@@ -932,11 +932,12 @@ fun Map(
                 }
 
         ) {
-
+            val extraScrollPadding = 100.dp
             Box(
                 modifier = Modifier
-                    .size(virtualWidthDp, virtualHeightDp)
-            ) {
+                    .size(virtualWidthDp + extraScrollPadding * 2, virtualHeightDp + extraScrollPadding * 2) 
+                    .padding(extraScrollPadding)
+            ){
                 //INFO: hier kommt alles rein, ws mit der Map Skalieren soll
 
                 Image(
