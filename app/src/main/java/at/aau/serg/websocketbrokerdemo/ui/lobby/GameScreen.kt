@@ -903,30 +903,32 @@ fun Map(
                     detectTransformGestures { centroid, pan, zoom, rotation ->
                         val newScale = (gameVm.scale * zoom).coerceIn(0.5f, 3f)
 
-                        val currentScrollX = scrollStateX.value
-                        val currentScrollY = scrollStateY.value
+                        val currentScrollX = scrollStateX.value.toFloat()
+                        val currentScrollY = scrollStateY.value.toFloat()
 
-                        val oldWidth = size.width.toFloat() * gameVm.scale
-                        val oldHeight = size.height.toFloat() * gameVm.scale
-                        val newWidth = size.width.toFloat() * newScale
-                        val newHeight = size.height.toFloat() * newScale
 
-                        val offsetX =
-                            (centroid.x + currentScrollX) * (newWidth / oldWidth) - centroid.x
-                        val offsetY =
-                            (centroid.y + currentScrollY) * (newHeight / oldHeight) - centroid.y
+                        val mapCentroidX = centroid.x + currentScrollX
+                        val mapCentroidY = centroid.y + currentScrollY
+
+                        val oldScaledWidth = intrinsicSize.width.toFloat() * gameVm.scale
+                        val oldScaledHeight = intrinsicSize.height.toFloat() * gameVm.scale
+                        val newScaledWidth = intrinsicSize.width.toFloat() * newScale
+                        val newScaledHeight = intrinsicSize.height.toFloat() * newScale
+
+                        val scaleFactorX = newScaledWidth / oldScaledWidth
+                        val scaleFactorY = newScaledHeight / oldScaledHeight
+
+                        val targetScrollX = mapCentroidX * scaleFactorX - centroid.x
+                        val targetScrollY = mapCentroidY * scaleFactorY - centroid.y
 
                         gameVm.scale = newScale
 
                         coroutineScope.launch {
-                            scrollStateX.scrollTo(offsetX.roundToInt())
+                            // Wende die Verschiebung durch Zoom-Fokus und Pan gemeinsam an
+                            scrollStateX.scrollTo((targetScrollX - pan.x).roundToInt())
                         }
                         coroutineScope.launch {
-                            scrollStateY.scrollTo(offsetY.roundToInt())
-                        }
-                        coroutineScope.launch {
-                            scrollStateX.scrollTo((scrollStateX.value - pan.x).roundToInt())
-                            scrollStateY.scrollTo((scrollStateY.value - pan.y).roundToInt())
+                            scrollStateY.scrollTo((targetScrollY - pan.y).roundToInt())
                         }
                     }
                 }
@@ -935,7 +937,7 @@ fun Map(
             val extraScrollPadding = 100.dp
             Box(
                 modifier = Modifier
-                    .size(virtualWidthDp + extraScrollPadding * 2, virtualHeightDp + extraScrollPadding * 2) 
+                    .size(virtualWidthDp + extraScrollPadding * 2, virtualHeightDp + extraScrollPadding * 2)
                     .padding(extraScrollPadding)
             ){
                 //INFO: hier kommt alles rein, ws mit der Map Skalieren soll
