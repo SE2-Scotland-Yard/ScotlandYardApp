@@ -19,7 +19,7 @@ class UserSessionViewModel : ViewModel() {
     val roles = mutableStateMapOf<String, String>()
 
     fun getAvatarDrawableRes(playerName: String): Int {
-        return if (playerName.startsWith("[BOT]")) {
+        return if (playerName.startsWith("[BOT")) {
             R.drawable.bot
         } else {
             Avatar.fromId(avatarIds[playerName] ?: 1)?.drawableRes ?: R.drawable.bear
