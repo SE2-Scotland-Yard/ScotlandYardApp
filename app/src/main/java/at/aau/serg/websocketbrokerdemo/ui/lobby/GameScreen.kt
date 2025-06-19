@@ -48,6 +48,9 @@ import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
 import com.example.myapplication.R
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,7 +73,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 
 import androidx.compose.ui.text.font.FontWeight
 
@@ -79,6 +84,8 @@ import androidx.media3.common.util.UnstableApi
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 import androidx.compose.ui.unit.IntSize
+
+
 
 
 
@@ -161,18 +168,23 @@ fun GameScreen(
     fun scrollToPosition(positionId: Int, scope: CoroutineScope) {
         val point = gameVm.pointPositions[positionId]
         point?.let { (x, y) ->
-            val targetX = x - (screenWidth / 2)
-            val targetY = y - (screenHeight / 2)
+            val scaledX = (x * gameVm.scale).toInt()
+            val scaledY = (y * gameVm.scale).toInt()
+
+            val targetX = scaledX - (screenWidth / 2)
+            val targetY = scaledY - (screenHeight / 2)
 
             scope.launch {
-                scrollStateX.animateScrollTo(targetX, animationSpec = tween(durationMillis = 1500))
+                scrollStateX.animateScrollTo(targetX.coerceAtLeast(0), animationSpec = tween(durationMillis = 1000))
             }
-
             scope.launch {
-                scrollStateY.animateScrollTo(targetY, animationSpec = tween(durationMillis = 1500))
+                scrollStateY.animateScrollTo(targetY.coerceAtLeast(0), animationSpec = tween(durationMillis = 1000))
             }
         }
     }
+
+
+
 
 
     LaunchedEffect(gameUpdate?.playerPositions) {
@@ -739,7 +751,7 @@ fun GameScreen(
 
             ) {
                 VideoPlayerComposable(
-                    videoUri = "file:///android_asset/loadingScreen.mp4",  // WICHTIG: MIT `.mp4`-Endung!
+                    videoUri = "file:///android_asset/loadingScreen.mp4",  // WICHTIG: MIT .mp4-Endung!
                     modifier = Modifier.fillMaxWidth(),
                     looping = false,
                     onVideoEnd = {
@@ -865,92 +877,131 @@ fun Map(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val mapPainter = painterResource(id = if (useSmallMap) R.drawable.map_small else R.drawable.map)
-    val tablePainter = painterResource(id = R.drawable.table) // Dein neuer Tisch
-    val points = gameVm.pointPositions
 
-    val mapWidthPx = mapPainter.intrinsicSize.width
-    val mapHeightPx = mapPainter.intrinsicSize.height
-    val aspectRatio = mapWidthPx / mapHeightPx
+    val mapPainter   = painterResource(if (useSmallMap) R.drawable.map_small else R.drawable.map)
+    val tablePainter = painterResource(R.drawable.table)
 
-    var renderedSize by remember { mutableStateOf(IntSize.Zero) }
+    val mapWidthPx   = mapPainter.intrinsicSize.width
+    val mapHeightPx  = mapPainter.intrinsicSize.height
+    val aspectRatio  = mapWidthPx / mapHeightPx
+    val borderDp     = 64.dp
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    var screenSize by remember { mutableStateOf(IntSize.Zero) }
+    var boardSize by remember { mutableStateOf(IntSize.Zero) }
 
+    val minScale = 1f
+    val maxScale = 4f
 
-        Image(
-            painter = tablePainter,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+    val transformState = rememberTransformableState { zoom, pan, _ ->
+        val newScale = (gameVm.scale * zoom).coerceIn(minScale, maxScale)
 
+        if (screenSize.width > 0 && screenSize.height > 0) {
+            val sw = screenSize.width.toFloat()
+            val sh = screenSize.height.toFloat()
+            val scaledW = sw * newScale
+            val scaledH = sh * newScale
+            val maxX = ((scaledW - sw) / 2f).coerceAtLeast(0f)
+            val maxY = ((scaledH - sh) / 2f).coerceAtLeast(0f)
 
-        ZoomableMapWrapper(
-            scale = gameVm.scale,
-            onScaleChange = { gameVm.scale = it }
+            gameVm.offsetX = (gameVm.offsetX + pan.x).coerceIn(-maxX, maxX)
+            gameVm.offsetY = (gameVm.offsetY + pan.y).coerceIn(-maxY, maxY)
+        }
+
+        gameVm.scale = newScale
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { screenSize = it.size }
+            .transformable(state = transformState)
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX       = gameVm.scale
+                    scaleY       = gameVm.scale
+                    translationX = gameVm.offsetX
+                    translationY = gameVm.offsetY
+                }
         ) {
-            Box(
-                modifier = Modifier
-                    .size(3000.dp)
-            ) {
+            // Hintergrund: Tisch
+            Image(
+                painter = tablePainter,
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxSize()
+            )
 
+            // Brett + Overlays
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(borderDp)
+            ) {
                 Box(
-                    modifier = Modifier
+                    Modifier
                         .align(Alignment.Center)
                         .aspectRatio(aspectRatio)
-                        .onGloballyPositioned { coordinates ->
-                            renderedSize = coordinates.size
-                        }
+                        .onGloballyPositioned { boardSize = it.size }
                 ) {
+                    // Brett
                     Image(
                         painter = mapPainter,
                         contentDescription = "Map",
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.FillBounds,
                         modifier = Modifier.fillMaxSize()
                     )
 
-                    val scaleMapX = renderedSize.width / mapWidthPx
-                    val scaleMapY = renderedSize.height / mapHeightPx
+                    // ✅ Overlays direkt über der Karte – bleiben synchron!
+                    val scaleX = boardSize.width.toFloat() / mapWidthPx
+                    val scaleY = boardSize.height.toFloat() / mapHeightPx
 
                     Stations(
-                        gameVm = gameVm,
-                        points = points,
-                        density = density,
+                        gameVm       = gameVm,
+                        points       = gameVm.pointPositions,
+                        density      = density,
                         allowedMoves = allowedMoves,
-                        gameId = gameId,
-                        username = username,
-                        isMyTurn = isMyTurn,
-                        scaleX = scaleMapX,
-                        scaleY = scaleMapY
+                        gameId       = gameId,
+                        username     = username,
+                        isMyTurn     = isMyTurn,
+                        scaleX       = scaleX,
+                        scaleY       = scaleY
                     )
 
                     PlayerPositions(
-                        gameVm = gameVm,
-                        points = points,
-                        density = density,
+                        gameVm          = gameVm,
+                        points          = gameVm.pointPositions,
+                        density         = density,
                         playerPositions = playerPositions,
-                        userSessionVm = userSessionVm,
-                        mrXPosition = mrXPosition,
-                        gameUpdate = gameUpdate,
-                        scaleMapX = scaleMapX,
-                        scaleMapY = scaleMapY
+                        userSessionVm   = userSessionVm,
+                        mrXPosition     = mrXPosition,
+                        gameUpdate      = gameUpdate,
+                        scaleMapX       = scaleX,
+                        scaleMapY       = scaleY
                     )
 
                     if (showCheatArrow && username != null) {
                         val myPos = gameUpdate?.playerPositions?.get(username)
                         val pointPositions = gameVm.repository.getPointPositions(context)
-                        val myXYRaw = myPos?.let { pointPositions[it] } ?: Pair(0, 0)
-                        val myXY = Pair(myXYRaw.first.toFloat(), myXYRaw.second.toFloat())
+                        val myXYRaw = myPos?.let { pointPositions[it] } ?: (0 to 0)
+                        val myXY = myXYRaw.first.toFloat() to myXYRaw.second.toFloat()
 
-                        CheatArrow(myXY = myXY, mrxXY = mrxXY, scaleX = scaleMapX, scaleY = scaleMapY)
-
+                        CheatArrow(
+                            myXY   = myXY,
+                            mrxXY  = mrxXY,
+                            scaleX = scaleX,
+                            scaleY = scaleY
+                        )
                     }
                 }
             }
         }
     }
 }
+
+
 
 
 
@@ -964,135 +1015,137 @@ private fun Stations(
     allowedMoves: List<AllowedMoveResponse>,
     gameId: String,
     username: String?,
-    isMyTurn : Boolean,
+    isMyTurn: Boolean,
     scaleX: Float,
     scaleY: Float
 ) {
     if (!isMyTurn) return
-    val buttonSizeDp = (1 * gameVm.scale).dp
 
+    val buttonSizeDp = 24.dp
+    val borderWidthDp = 3.dp
 
     val doubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val movesToShow = if (gameVm.isDoubleMoveMode) doubleMoves else allowedMoves
-
     val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
-
-
-    val borderWidthDp = 3.dp
-
 
     points.forEach { (id, pos) ->
         val (xPx, yPx) = pos
         val xDp = with(density) { (xPx * scaleX).toDp() }
         val yDp = with(density) { (yPx * scaleY).toDp() }
 
-        val movesForStation = movesToShow.filter { move ->
-            try {
-                move.keys.contains(id)
-            } catch (e: Exception) {
-                println("Error checking moves for station $id: ${e.message}")
-                false
-            }
-        }
-
+        val movesForStation = movesToShow.filter { it.keys.contains(id) }
         val hasMoves = movesForStation.isNotEmpty()
 
+        /* ───────────────────── Anker-Box + Dropdown gemeinsam ─────────────────── */
         Box(
             modifier = Modifier
                 .offset(x = xDp - buttonSizeDp / 2, y = yDp - buttonSizeDp / 2)
+                .size(buttonSizeDp)                       // ← Eltern-Box legt Größe & Pos fest
         ) {
-            Button(
-                onClick = {
-                    gameVm.selectedStation = id
-                    expandedStates[id] = hasMoves
-                },
-                modifier = Modifier
-                    .size(buttonSizeDp)
+            /* 1) Stations-Button (die klickbare Fläche) */
+            Spacer(
+                Modifier
+                    .matchParentSize()
                     .border(
                         width = if (hasMoves) borderWidthDp else 0.dp,
                         color = if (hasMoves) Color.Blue else Color.Transparent,
                         shape = CircleShape
-                    ),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent
-                ),
-                enabled = hasMoves
-            ) {}
+                    )
+                    .background(
+                        color = if (gameVm.selectedStation == id)
+                            Color(0xFF448AFF).copy(alpha = 0.25f)
+                        else
+                            Color.Transparent,
+                        shape = CircleShape
+                    )
+                    .pointerInput(hasMoves) {
+                        if (!hasMoves) return@pointerInput
+                        detectTapGestures {
+                            gameVm.selectedStation = id
+                            expandedStates[id] = true       // Menü einblenden
+                        }
+                    }
+            )
 
-            if (hasMoves && (expandedStates[id] ?: false)) {
+            /* 2) DropdownMenu – Kind der gleichen Box, dadurch „angedockt“ */
+            /* 2) DropdownMenu – Kind der gleichen Box */
+            if (hasMoves && expandedStates[id] == true) {
                 DropdownMenu(
                     expanded = true,
                     onDismissRequest = { expandedStates[id] = false },
-                    modifier = Modifier.background(Color.Black.copy(alpha=0.85f))
+                    modifier = Modifier
+                        .align(Alignment.TopStart)          // sitzt beim Button
+                        .background(Color.Black.copy(alpha = 0.85f))
                 ) {
                     movesForStation.forEach { move ->
 
-
                         val (targetStation, ticketType) = when {
                             move.keys.size >= 2 -> {
-                                val target = move.keys.firstOrNull { it != id } ?: -1
-                                val ticket = move.values.firstOrNull() ?: ""
+                                val target = move.keys.first { it != id }
+                                val ticket = move.values.first()
                                 target to ticket
                             }
-                            else -> {
-                                move.keys.firstOrNull()?.let { key ->
-                                    key to (move[key] ?: "")
-                                } ?: (-1 to "")
-                            }
+                            else -> move.keys.first() to (move[move.keys.first()] ?: "")
                         }
 
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
+
+                            /* ───────── HIER kommt dein Row-Layout hinein ───────── */
                             DropdownMenuItem(
                                 modifier = Modifier.height(40.dp),
-                                text= {
+
+                                /* --- Inhalt wieder einsetzen --- */
+                                text = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = 8.dp)
                                     ) {
-
                                         val ticketParts = ticketType.split("+")
-                                        val firstTicketBaseType = ticketParts.firstOrNull() ?: ""
-                                        val secondTicketBaseType = if (ticketParts.size > 1) ticketParts[1] else ""
-                                        val positionPart = if (ticketParts.size > 2 && ticketParts.last().startsWith("POS")) ticketParts.last() else ""
+                                        val firstTicket = ticketParts.firstOrNull() ?: ""
+                                        val secondTicket =
+                                            if (ticketParts.size > 1) ticketParts[1] else ""
+                                        val positionPart =
+                                            ticketParts.lastOrNull()?.takeIf { it.startsWith("POS") } ?: ""
 
-
-                                        fun getImageResId(baseType: String): Int? {
-                                            return when (baseType) {
-                                                "BUS" -> R.drawable.ticket_bus
-                                                "TAXI" -> R.drawable.ticket_taxi
-                                                "UNDERGROUND" -> R.drawable.ticket_under
-                                                "BLACK" -> R.drawable.ticket_black
-                                                else -> null
-                                            }
+                                        // kleine Hilfsfunktion
+                                        fun imgRes(base: String) = when (base) {
+                                            "BUS" -> R.drawable.ticket_bus
+                                            "TAXI" -> R.drawable.ticket_taxi
+                                            "UNDERGROUND" -> R.drawable.ticket_under
+                                            "BLACK" -> R.drawable.ticket_black
+                                            else -> null
                                         }
 
-                                        getImageResId(firstTicketBaseType)?.let { resId ->
+                                        imgRes(firstTicket)?.let { res ->
                                             Image(
-                                                painter = painterResource(id = resId),
-                                                contentDescription = "$firstTicketBaseType Icon",
+                                                painter = painterResource(res),
+                                                contentDescription = "$firstTicket-Icon",
                                                 modifier = Modifier.size(36.dp)
                                             )
-                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Spacer(Modifier.width(4.dp))
                                         }
 
-                                        if (secondTicketBaseType.isNotEmpty() && secondTicketBaseType != positionPart && ticketParts.size > 1) {
-                                            getImageResId(secondTicketBaseType)?.let { resId ->
+                                        if (secondTicket.isNotEmpty()
+                                            && secondTicket != positionPart
+                                            && ticketParts.size > 1
+                                        ) {
+                                            imgRes(secondTicket)?.let { res ->
                                                 Image(
-                                                    painter = painterResource(id = resId),
-                                                    contentDescription = "$secondTicketBaseType Icon",
+                                                    painter = painterResource(res),
+                                                    contentDescription = "$secondTicket-Icon",
                                                     modifier = Modifier.size(36.dp)
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                        } else if (firstTicketBaseType.isNotEmpty() && secondTicketBaseType.isEmpty()) {
-                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                        } else if (firstTicket.isNotEmpty()
+                                            && secondTicket.isEmpty()
+                                        ) {
+                                            Spacer(Modifier.width(8.dp))
                                         }
 
                                         Text(
                                             text = buildString {
-                                                if (positionPart.isNotEmpty()) {
-                                                    append(" ($positionPart)")
-                                                }
+                                                if (positionPart.isNotEmpty()) append(" ($positionPart)")
                                                 append(" → Station $targetStation")
                                             },
                                             style = MaterialTheme.typography.bodyMedium.copy(
@@ -1102,6 +1155,8 @@ private fun Stations(
                                         )
                                     }
                                 },
+                                /* -------------------------------- */
+
                                 onClick = {
                                     username?.let { name ->
                                         when {
@@ -1118,23 +1173,25 @@ private fun Stations(
                                                 gameVm.doubleMove(gameId, name, targetStation, ticketType)
                                             }
                                             else -> {
-
                                                 gameVm.move(gameId, name, targetStation, ticketType)
                                             }
                                         }
                                         expandedStates[id] = false
                                     }
                                 }
-                            )
-                        }
 
+
+                            )
+                            /* ───────────────────────────────────────────────────── */
+                        }
                     }
                 }
             }
-        }
-    }
 
+        } // Box
+    } // forEach
 }
+
 @Composable
 private fun PlayerPositions(
     gameVm: GameViewModel,
@@ -1147,7 +1204,8 @@ private fun PlayerPositions(
     scaleMapX: Float,
     scaleMapY: Float
 ) {
-    val iconSizeDp = (60 / gameVm.scale).dp.coerceIn(30.dp, 60.dp)
+    val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
+
 
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
@@ -1471,6 +1529,24 @@ fun TicketWithCount(
     }
 
     ticketRes?.let {
+        val configuration = LocalConfiguration.current
+        val screenWidthDp = configuration.screenWidthDp
+
+
+        val ticketWidth = when {
+            screenWidthDp < 400 -> 60.dp
+            screenWidthDp < 600 -> 72.dp
+            else -> 96.dp
+        }
+        val ticketHeight = ticketWidth * (4f / 3f)
+
+
+        val badgeOffsetX = ticketWidth * -0.7f
+        val badgeOffsetY = ticketWidth * 0.05f
+        val fontSize = (ticketWidth.value * 0.2f).sp
+        val badgePaddingH = ticketWidth * 0.1f
+        val badgePaddingV = ticketWidth * 0.06f
+
         var previousCount by remember { mutableStateOf(count) }
         var animateScale by remember { mutableStateOf(false) }
 
@@ -1480,7 +1556,6 @@ fun TicketWithCount(
             label = "scaleOnTicketChange"
         )
 
-        // Effekt beim Count-Wechsel triggern
         LaunchedEffect(count) {
             if (count != previousCount) {
                 animateScale = true
@@ -1493,13 +1568,14 @@ fun TicketWithCount(
         Box(
             contentAlignment = Alignment.TopEnd,
             modifier = modifier
-                .size(width = 72.dp, height = 96.dp)
+                .size(width = ticketWidth, height = ticketHeight)
                 .graphicsLayer {
                     rotationZ = -8f
                     scaleX = scale
                     scaleY = scale
                 }
         ) {
+            // 🎫 Ticket-Bild
             Image(
                 painter = painterResource(id = it),
                 contentDescription = ticket,
@@ -1507,11 +1583,12 @@ fun TicketWithCount(
                 contentScale = ContentScale.Fit
             )
 
+            // 🔢 Anzahl-Badge oben rechts
             Box(
                 modifier = Modifier
-                    .offset(x = (-50).dp, y = 15.dp)
+                    .offset(x = badgeOffsetX, y = badgeOffsetY)
                     .background(Color.Black, shape = CircleShape)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                    .padding(horizontal = badgePaddingH, vertical = badgePaddingV)
             ) {
                 AnimatedContent(
                     targetState = count,
@@ -1524,13 +1601,16 @@ fun TicketWithCount(
                     Text(
                         text = animatedCount.toString(),
                         color = Color.White,
-                        fontSize = 12.sp
+                        fontSize = fontSize
                     )
                 }
             }
         }
     }
 }
+
+
+
 
 
 
@@ -1545,23 +1625,33 @@ fun ExpandableTicketStackAnimated(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    /* ---------- TRANSITION ---------- */
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val baseSize = when {
+        screenWidthDp < 400 -> 72.dp
+        screenWidthDp < 600 -> 96.dp
+        else -> 120.dp
+    }
+    val ticketWidth = baseSize
+    val ticketHeight = baseSize / 2
+
+    val offsetShort = -ticketWidth * 0.9f     // -80.dp → dynamisch
+    val offsetLong  = ticketWidth * 1.05f     // 100.dp → dynamisch
+
     val transition = updateTransition(expanded, label = "ticket_expand")
 
-    // Position & Rotation
-    val blackX  by transition.animateDp(label = "blackX")  { if (it) 0.dp else (-80).dp }
-    val blackY by transition.animateDp(label = "blackY") { if (it) 0.dp  else   0.dp }
+    val blackX  by transition.animateDp(label = "blackX")  { if (it) 0.dp else offsetShort }
+    val blackY  by transition.animateDp(label = "blackY")  { if (it) 0.dp else 0.dp }
     val blackRot by transition.animateFloat(label = "blackRot") { if (it) 0f else -15f }
 
-    val doubleX by transition.animateDp(label = "doubleX") { if (it) 100.dp else (-80).dp }
-    val doubleY by transition.animateDp(label = "doubleY") { if (it) 0.dp else (-30).dp }
+    val doubleX by transition.animateDp(label = "doubleX") { if (it) offsetLong else offsetShort }
+    val doubleY by transition.animateDp(label = "doubleY") { if (it) 0.dp else (-ticketHeight * 0.6f) }
     val doubleRot by transition.animateFloat(label = "doubleRot") { if (it) 0f else -15f }
 
-    Box(modifier = Modifier
-        .padding(8.dp)
-        .offset(y = (-12).dp)
+    Box(
+        modifier = Modifier
+            .padding(8.dp)
+            .offset(y = (-12).dp)
     ) {
-        /* BLACK */
         TicketAnimatedButton(
             ticket = "BLACK",
             offsetX = blackX,
@@ -1571,10 +1661,11 @@ fun ExpandableTicketStackAnimated(
             onClick = {
                 if (!expanded) expanded = true else onBlackClick()
             },
-            zIndex = if (expanded) 1f else 2f
+            zIndex = if (expanded) 1f else 2f,
+            width = ticketWidth,
+            height = ticketHeight
         )
 
-        /* DOUBLE */
         TicketAnimatedButton(
             ticket = "DOUBLE",
             offsetX = doubleX,
@@ -1584,7 +1675,9 @@ fun ExpandableTicketStackAnimated(
             onClick = {
                 if (!expanded) expanded = true else onDoubleClick()
             },
-            zIndex = if (expanded) 2f else 1f
+            zIndex = if (expanded) 2f else 1f,
+            width = ticketWidth,
+            height = ticketHeight
         )
 
         if (expanded) {
@@ -1592,10 +1685,10 @@ fun ExpandableTicketStackAnimated(
                 onClick = {
                     expanded = false
                     gameVm.isBlackMoveMode = false
-                    gameVm.isDoubleMoveMode = false},
-
+                    gameVm.isDoubleMoveMode = false
+                },
                 modifier = Modifier
-                    .offset(x = 200.dp, y = 10.dp)
+                    .offset(x = ticketWidth * 2f, y = 10.dp)
                     .size(32.dp),
                 colors = IconButtonDefaults.iconButtonColors(
                     containerColor = Color.Transparent
@@ -1608,10 +1701,9 @@ fun ExpandableTicketStackAnimated(
                 )
             }
         }
-
-
     }
 }
+
 
 /* ----------------------------------------------------- */
 
@@ -1623,7 +1715,9 @@ fun TicketAnimatedButton(
     rotation: Float,
     selected: Boolean,
     onClick: () -> Unit,
-    zIndex: Float
+    zIndex: Float,
+    width: Dp,
+    height: Dp
 ) {
     val resId = when (ticket.uppercase()) {
         "BLACK"  -> R.drawable.ticket_black
@@ -1635,7 +1729,7 @@ fun TicketAnimatedButton(
         modifier = Modifier
             .offset(x = offsetX, y = offsetY)
             .zIndex(zIndex)
-            .size(width = 96.dp, height = 48.dp)
+            .size(width = width, height = height)
             .graphicsLayer { rotationZ = rotation }
             .border(
                 width = if (selected) 3.dp else 0.dp,
@@ -1655,6 +1749,7 @@ fun TicketAnimatedButton(
         )
     }
 }
+
 
 
 @Composable

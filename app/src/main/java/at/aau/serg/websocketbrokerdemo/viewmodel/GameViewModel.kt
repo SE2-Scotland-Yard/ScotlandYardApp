@@ -39,7 +39,10 @@ class GameViewModel(
 
     val pointPositions: Map<Int, Pair<Int, Int>> = repository.getPointPositions(context)
 
-    var scale : Float by mutableFloatStateOf(1f)
+    var scale : Float by mutableFloatStateOf(1.2f)
+
+    var offsetX by mutableFloatStateOf(0f)
+    var offsetY by mutableFloatStateOf(0f)
 
     var selectedTicket : Ticket? by mutableStateOf(null)
 
