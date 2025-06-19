@@ -943,7 +943,8 @@ fun Map(
                         val myXYRaw = myPos?.let { pointPositions[it] } ?: Pair(0, 0)
                         val myXY = Pair(myXYRaw.first.toFloat(), myXYRaw.second.toFloat())
 
-                        CheatArrow(myXY = myXY, mrxXY = mrxXY, scale = 1f)
+                        CheatArrow(myXY = myXY, mrxXY = mrxXY, scaleX = scaleMapX, scaleY = scaleMapY)
+
                     }
                 }
             }
@@ -970,10 +971,14 @@ private fun Stations(
     if (!isMyTurn) return
     val buttonSizeDp = (1 * gameVm.scale).dp
 
+
     val doubleMoves by remember { derivedStateOf { gameVm.allowedDoubleMoves } }
     val movesToShow = if (gameVm.isDoubleMoveMode) doubleMoves else allowedMoves
 
     val expandedStates = remember { mutableStateMapOf<Int, Boolean>() }
+
+
+    val borderWidthDp = 3.dp
 
 
     points.forEach { (id, pos) ->
@@ -981,8 +986,6 @@ private fun Stations(
         val xDp = with(density) { (xPx * scaleX).toDp() }
         val yDp = with(density) { (yPx * scaleY).toDp() }
 
-
-        // Filter moves that involve the current station
         val movesForStation = movesToShow.filter { move ->
             try {
                 move.keys.contains(id)
@@ -993,7 +996,6 @@ private fun Stations(
         }
 
         val hasMoves = movesForStation.isNotEmpty()
-
 
         Box(
             modifier = Modifier
@@ -1007,7 +1009,7 @@ private fun Stations(
                 modifier = Modifier
                     .size(buttonSizeDp)
                     .border(
-                        width = if (hasMoves) 3.dp else 0.dp,
+                        width = if (hasMoves) borderWidthDp else 0.dp,
                         color = if (hasMoves) Color.Blue else Color.Transparent,
                         shape = CircleShape
                     ),
@@ -1015,7 +1017,6 @@ private fun Stations(
                     containerColor = if (gameVm.selectedStation == id) Color.Magenta else Color.Transparent
                 ),
                 enabled = hasMoves
-
             ) {}
 
             if (hasMoves && (expandedStates[id] ?: false)) {

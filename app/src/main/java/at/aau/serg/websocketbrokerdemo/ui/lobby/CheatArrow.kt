@@ -26,31 +26,34 @@ import kotlinx.coroutines.launch
 fun CheatArrow(
     myXY: Pair<Float, Float>,
     mrxXY: Pair<Float, Float>,
-    scale: Float
+    scaleX: Float,
+    scaleY: Float
 ) {
-    val angleRad = atan2(mrxXY.second - myXY.second, mrxXY.first - myXY.first)//Spitze-Schaft
-    val angleDeg = Math.toDegrees(angleRad.toDouble()).toFloat()
-    val offsetDistancePx = 100f //wie weit der Pfeil vom avatar weg ist
-
-    val dx = offsetDistancePx * kotlin.math.cos(angleRad)
-    val dy = offsetDistancePx * kotlin.math.sin(angleRad)
-
     val density = LocalDensity.current
-    val xDp = with(density) { ((myXY.first + dx) * scale).toDp() }
-    val yDp = with(density) { ((myXY.second + dy) * scale).toDp() }
+
+    val dxRaw = mrxXY.first - myXY.first
+    val dyRaw = mrxXY.second - myXY.second
+
+    val angleRad = atan2(dyRaw, dxRaw)
+    val angleDeg = Math.toDegrees(angleRad.toDouble()).toFloat()
+
+    val offsetDistance = 140f
+    val dx = offsetDistance * kotlin.math.cos(angleRad)
+    val dy = offsetDistance * kotlin.math.sin(angleRad)
+
+    val arrowX = (myXY.first + dx) * scaleX
+    val arrowY = (myXY.second + dy) * scaleY
 
     val iconSize = 48.dp
-    val offsetX = xDp - iconSize / 2
-    val offsetY = yDp - iconSize / 2
-
-
+    val xDp = with(density) { arrowX.toDp() }
+    val yDp = with(density) { arrowY.toDp() }
 
     Box(
         modifier = Modifier
-            .offset(x = offsetX, y = offsetY)
+            .offset(x = xDp - iconSize / 2, y = yDp - iconSize / 2)
             .size(iconSize)
             .graphicsLayer {
-                rotationZ = angleDeg + 90f // +90° weil der Pfeil nach oben zeigt, die Berechnung geht aber davon aus dass der Pfeil nach links schaut
+                rotationZ = angleDeg + 90f
             }
     ) {
         Image(
@@ -60,3 +63,6 @@ fun CheatArrow(
         )
     }
 }
+
+
+
