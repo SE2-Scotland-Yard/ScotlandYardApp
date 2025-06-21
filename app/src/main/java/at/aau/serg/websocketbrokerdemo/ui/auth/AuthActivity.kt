@@ -16,11 +16,13 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.SideEffect
-
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 
 
 class AuthActivity : ComponentActivity() {
 
+    @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
