@@ -14,9 +14,11 @@ import androidx.annotation.RawRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -33,6 +35,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -55,6 +58,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -84,9 +88,8 @@ import androidx.media3.common.util.UnstableApi
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 import androidx.compose.ui.unit.IntSize
-
-
-
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -116,32 +119,27 @@ fun GameScreen(
     var visibleTicket by remember { mutableStateOf<String?>(null) }
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
-    var isInitialized by remember { mutableStateOf(false) }
     val myPosition = gameUpdate?.playerPositions?.get(username)
 
     val scrollStateX = rememberScrollState()
-    val scrollStateY = rememberScrollState()
+
 
     val context = LocalContext.current
-    val screenWidth = remember { context.resources.displayMetrics.widthPixels }
-    val screenHeight = remember { context.resources.displayMetrics.heightPixels }
+
 
     val isMyTurn by derivedStateOf {
         username == gameUpdate?.currentPlayer
     }
 
-    var isScrollingToMrX by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
-    var lastMrXPosition by remember { mutableStateOf<Int?>(null) }
-    var lastMyPosition by remember { mutableStateOf<Int?>(null) }
-    var showLeaveDialog by remember { mutableStateOf(false) }
+
     var showMrXSurrenderedOverlay by remember { mutableStateOf(false) }
     var showSettingsMenu by remember { mutableStateOf(false) }
 
     var showCheatArrow by remember { mutableStateOf(false) }
     var mrxXY by remember { mutableStateOf(Pair(0f, 0f)) }
     var hasUsedCheat by remember { mutableStateOf(false) }
-    val hasSeenCheatHint = remember { mutableStateOf(false) }
     val showCheatHint = remember { mutableStateOf(false) }
 
     var showLoadingOverlay by remember { mutableStateOf(true) }
@@ -165,55 +163,7 @@ fun GameScreen(
         }
     }
 
-    fun scrollToPosition(positionId: Int, scope: CoroutineScope) {
-        val point = gameVm.pointPositions[positionId]
-        point?.let { (x, y) ->
-            val scaledX = (x * gameVm.scale).toInt()
-            val scaledY = (y * gameVm.scale).toInt()
 
-            val targetX = scaledX - (screenWidth / 2)
-            val targetY = scaledY - (screenHeight / 2)
-
-            scope.launch {
-                scrollStateX.animateScrollTo(targetX.coerceAtLeast(0), animationSpec = tween(durationMillis = 1000))
-            }
-            scope.launch {
-                scrollStateY.animateScrollTo(targetY.coerceAtLeast(0), animationSpec = tween(durationMillis = 1000))
-            }
-        }
-    }
-
-
-
-
-
-    LaunchedEffect(gameUpdate?.playerPositions) {
-        val mrXName = userSessionVm.getMrXName()
-        val currentMrXPosition = gameUpdate?.playerPositions?.get(mrXName)
-        val currentMyPosition = gameUpdate?.playerPositions?.get(username)
-
-        val mrXPositionChanged = currentMrXPosition != null && currentMrXPosition != -1 && currentMrXPosition != lastMrXPosition
-
-
-        if (mrXPositionChanged && !isScrollingToMrX && currentMyPosition != null) {
-            isScrollingToMrX = true
-
-            scrollToPosition(currentMrXPosition!!, coroutineScope)
-            lastMrXPosition = currentMrXPosition
-
-            delay(3000)
-
-
-            scrollToPosition(currentMyPosition, coroutineScope)
-            lastMyPosition = currentMyPosition
-
-            isScrollingToMrX = false
-        }
-        gameVm.fetchMrXHistory(gameId) { history ->
-            mrXHistory = history
-        }
-
-    }
 
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Activity.SENSOR_SERVICE) as SensorManager
@@ -262,39 +212,6 @@ fun GameScreen(
 
         onDispose {
             sensorManager.unregisterListener(shakeDetector)
-        }
-    }
-
-
-
-
-
-
-
-    LaunchedEffect(myPosition, mrXPosition, gameVm.scale) {
-
-        if (!isInitialized) {
-            val positionToFocus =
-                if (userSessionVm.role.value == "MRX") mrXPosition ?: myPosition else myPosition
-
-            if (positionToFocus != null) {
-
-                gameVm.scale = 1.2f.coerceIn(0.5f, 3f)
-
-
-                delay(100)
-
-
-                val point = gameVm.pointPositions[positionToFocus]
-                point?.let { (x, y) ->
-                    val targetX = (x * gameVm.scale).toInt() - (screenWidth / 2)
-                    val targetY = (y * gameVm.scale).toInt() - (screenHeight / 2)
-
-
-                }
-
-                isInitialized = true
-            }
         }
     }
 
@@ -612,7 +529,7 @@ fun GameScreen(
                     val currentRound = mrXHistory.lastOrNull()?.substringBefore(":") ?: "Runde 1"
 
                     Text(modifier = Modifier.padding(8.dp),
-                        text = "$currentRound",
+                        text = currentRound,
                         color = Color.White)
                 }
                 //cheat hint, wird bei klick weider ausgeblendet
@@ -910,6 +827,68 @@ fun Map(
         gameVm.scale = newScale
     }
 
+    // START: Added for zoom-to-MrX feature
+    val coroutineScope = rememberCoroutineScope()
+    var lastZoomedMrXPosition by remember { mutableStateOf<Int?>(null) }
+
+    val mrXName = userSessionVm.getMrXName()
+    val currentMrXPosition = playerPositions[mrXName]
+
+    LaunchedEffect(currentMrXPosition, userSessionVm.role.value, boardSize) {
+        // Condition: Only trigger for detectives when Mr. X appears at a new station
+        if (
+            userSessionVm.role.value != "MRX" &&
+            currentMrXPosition != null &&
+            currentMrXPosition != -1 &&
+            currentMrXPosition != lastZoomedMrXPosition &&
+            boardSize != IntSize.Zero // Ensure map is measured
+        ) {
+            lastZoomedMrXPosition = currentMrXPosition
+            val targetStationInfo = gameVm.pointPositions[currentMrXPosition] ?: return@LaunchedEffect
+
+            // 1. Save the user's current camera settings
+            val previousScale = gameVm.scale
+            val previousOffsetX = gameVm.offsetX
+            val previousOffsetY = gameVm.offsetY
+
+            // 2. Define the zoom-in target
+            val targetScale = 2.5f
+
+            // 3. Calculate the required offset to center the station on the screen
+            val scaleX = boardSize.width.toFloat() / mapWidthPx
+            val scaleY = boardSize.height.toFloat() / mapHeightPx
+            val targetBoardX = targetStationInfo.first * scaleX
+            val targetBoardY = targetStationInfo.second * scaleY
+
+            // Vector from the center of the board to the target station
+            val vecX = targetBoardX - (boardSize.width / 2f)
+            val vecY = targetBoardY - (boardSize.height / 2f)
+
+            // To center the target, we apply an opposite translation, scaled by the new zoom level
+            val targetOffsetX = -vecX * targetScale
+            val targetOffsetY = -vecY * targetScale
+
+
+            // 4. Animate TO the new position
+            coroutineScope.launch {
+                launch { Animatable(previousScale).animateTo(targetScale, tween(1000)) { gameVm.scale = value } }
+                launch { Animatable(previousOffsetX).animateTo(targetOffsetX, tween(1000)) { gameVm.offsetX = value } }
+                launch { Animatable(previousOffsetY).animateTo(targetOffsetY, tween(1000)) { gameVm.offsetY = value } }
+            }
+
+            // 5. Wait, then animate BACK to the original position
+            delay(2500L)
+
+            coroutineScope.launch {
+                launch { Animatable(gameVm.scale).animateTo(previousScale, tween(1000)) { gameVm.scale = value } }
+                launch { Animatable(gameVm.offsetX).animateTo(previousOffsetX, tween(1000)) { gameVm.offsetX = value } }
+                launch { Animatable(gameVm.offsetY).animateTo(previousOffsetY, tween(1000)) { gameVm.offsetY = value } }
+            }
+        }
+    }
+
+
+
     Box(
         Modifier
             .fillMaxSize()
@@ -954,7 +933,7 @@ fun Map(
                         modifier = Modifier.fillMaxSize()
                     )
 
-                    // ✅ Overlays direkt über der Karte – bleiben synchron!
+
                     val scaleX = boardSize.width.toFloat() / mapWidthPx
                     val scaleY = boardSize.height.toFloat() / mapHeightPx
 
@@ -1020,7 +999,6 @@ private fun Stations(
     scaleY: Float
 ) {
     if (!isMyTurn) return
-
     val buttonSizeDp = 24.dp
     val borderWidthDp = 3.dp
 
@@ -1036,15 +1014,14 @@ private fun Stations(
         val movesForStation = movesToShow.filter { it.keys.contains(id) }
         val hasMoves = movesForStation.isNotEmpty()
 
-        /* ───────────────────── Anker-Box + Dropdown gemeinsam ─────────────────── */
         Box(
             modifier = Modifier
                 .offset(x = xDp - buttonSizeDp / 2, y = yDp - buttonSizeDp / 2)
-                .size(buttonSizeDp)                       // ← Eltern-Box legt Größe & Pos fest
+                .size(buttonSizeDp)
         ) {
-            /* 1) Stations-Button (die klickbare Fläche) */
-            Spacer(
-                Modifier
+
+            Box(
+                modifier = Modifier
                     .matchParentSize()
                     .border(
                         width = if (hasMoves) borderWidthDp else 0.dp,
@@ -1058,43 +1035,52 @@ private fun Stations(
                             Color.Transparent,
                         shape = CircleShape
                     )
-                    .pointerInput(hasMoves) {
-                        if (!hasMoves) return@pointerInput
-                        detectTapGestures {
-                            gameVm.selectedStation = id
-                            expandedStates[id] = true       // Menü einblenden
-                        }
-                    }
+                    .zIndex(1f)
             )
 
-            /* 2) DropdownMenu – Kind der gleichen Box, dadurch „angedockt“ */
-            /* 2) DropdownMenu – Kind der gleichen Box */
+
+            if (hasMoves) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .zIndex(100f)
+                        .pointerInput(id) {
+                            detectTapGestures(
+                                onTap = {
+                                    gameVm.selectedStation = id
+                                    expandedStates[id] = true
+                                },
+                                onDoubleTap = {
+                                    gameVm.selectedStation = id
+                                    expandedStates[id] = true
+                                }
+                            )
+                        }
+                )
+            }
+
             if (hasMoves && expandedStates[id] == true) {
                 DropdownMenu(
                     expanded = true,
                     onDismissRequest = { expandedStates[id] = false },
                     modifier = Modifier
-                        .align(Alignment.TopStart)          // sitzt beim Button
+                        .align(Alignment.TopStart)
                         .background(Color.Black.copy(alpha = 0.85f))
                 ) {
                     movesForStation.forEach { move ->
-
                         val (targetStation, ticketType) = when {
                             move.keys.size >= 2 -> {
                                 val target = move.keys.first { it != id }
                                 val ticket = move.values.first()
                                 target to ticket
                             }
+
                             else -> move.keys.first() to (move[move.keys.first()] ?: "")
                         }
 
                         if (targetStation != -1 && ticketType.isNotEmpty()) {
-
-                            /* ───────── HIER kommt dein Row-Layout hinein ───────── */
                             DropdownMenuItem(
                                 modifier = Modifier.height(40.dp),
-
-                                /* --- Inhalt wieder einsetzen --- */
                                 text = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -1107,7 +1093,6 @@ private fun Stations(
                                         val positionPart =
                                             ticketParts.lastOrNull()?.takeIf { it.startsWith("POS") } ?: ""
 
-                                        // kleine Hilfsfunktion
                                         fun imgRes(base: String) = when (base) {
                                             "BUS" -> R.drawable.ticket_bus
                                             "TAXI" -> R.drawable.ticket_taxi
@@ -1155,42 +1140,62 @@ private fun Stations(
                                         )
                                     }
                                 },
-                                /* -------------------------------- */
-
                                 onClick = {
                                     username?.let { name ->
                                         when {
                                             gameVm.isBlackMoveMode && gameVm.isDoubleMoveMode -> {
                                                 val parts = ticketType.split("+")
-                                                val positionPart = if (parts.size > 2) parts.last() else ""
-                                                val blackTicket = "BLACK+BLACK" + if (positionPart.isNotEmpty()) "+$positionPart" else ""
-                                                gameVm.doubleMove(gameId, name, targetStation, blackTicket)
+                                                val positionPart =
+                                                    if (parts.size > 2) parts.last() else ""
+                                                val blackTicket =
+                                                    "BLACK+BLACK" + if (positionPart.isNotEmpty()) "+$positionPart" else ""
+                                                gameVm.doubleMove(
+                                                    gameId,
+                                                    name,
+                                                    targetStation,
+                                                    blackTicket
+                                                )
                                             }
+
                                             gameVm.isBlackMoveMode -> {
-                                                gameVm.blackMove(gameId, name, targetStation, ticketType)
+                                                gameVm.blackMove(
+                                                    gameId,
+                                                    name,
+                                                    targetStation,
+                                                    ticketType
+                                                )
                                             }
+
                                             gameVm.isDoubleMoveMode -> {
-                                                gameVm.doubleMove(gameId, name, targetStation, ticketType)
+                                                gameVm.doubleMove(
+                                                    gameId,
+                                                    name,
+                                                    targetStation,
+                                                    ticketType
+                                                )
                                             }
+
                                             else -> {
-                                                gameVm.move(gameId, name, targetStation, ticketType)
+                                                gameVm.move(
+                                                    gameId,
+                                                    name,
+                                                    targetStation,
+                                                    ticketType
+                                                )
                                             }
                                         }
                                         expandedStates[id] = false
                                     }
                                 }
-
-
                             )
-                            /* ───────────────────────────────────────────────────── */
                         }
                     }
                 }
             }
-
-        } // Box
-    } // forEach
+        }
+    }
 }
+
 
 @Composable
 private fun PlayerPositions(
@@ -1206,12 +1211,13 @@ private fun PlayerPositions(
 ) {
     val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
 
-
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var previousMrXShadowPosition by remember { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val nudged = remember { mutableStateMapOf<String, Boolean>() }
 
     LaunchedEffect(playerPositions) {
         previousPlayerPositions = playerPositions
@@ -1252,11 +1258,10 @@ private fun PlayerPositions(
                 label = "y_$playerName"
             )
 
-            val positionXDp: Dp = with(density) { (animatedX * scaleMapX).toDp() }
-            val positionYDp: Dp = with(density) { (animatedY * scaleMapY).toDp() }
+            val xDp = with(density) { (animatedX * scaleMapX).toDp() }
+            val yDp = with(density) { (animatedY * scaleMapY).toDp() }
 
-            val infiniteTransition = rememberInfiniteTransition(label = "pulse_$playerName")
-            val pulse by infiniteTransition.animateFloat(
+            val pulse by rememberInfiniteTransition(label = "pulse_$playerName").animateFloat(
                 initialValue = 1f,
                 targetValue = if (playerName == gameUpdate?.currentPlayer) 1.2f else 1f,
                 animationSpec = infiniteRepeatable(
@@ -1266,10 +1271,15 @@ private fun PlayerPositions(
             )
 
             val glowColor = if (playerName == gameUpdate?.currentPlayer) Color.Yellow else Color.Transparent
+            val nudgeX by animateDpAsState(
+                targetValue = if (nudged[playerName] == true) iconSizeDp * .6f else 0.dp,
+                animationSpec = tween(300),
+                label = "nd_$playerName"
+            )
 
             Box(
                 modifier = Modifier
-                    .offset(positionXDp - iconSizeDp / 2, positionYDp - iconSizeDp / 2)
+                    .offset(xDp - iconSizeDp / 2 + nudgeX, yDp - iconSizeDp / 2)
                     .graphicsLayer {
                         scaleX = pulse
                         scaleY = pulse
@@ -1279,6 +1289,15 @@ private fun PlayerPositions(
                     }
                     .background(glowColor.copy(alpha = 0.4f), CircleShape)
                     .size(iconSizeDp)
+                    .clickable {
+                        if (nudged[playerName] != true) {
+                            nudged[playerName] = true
+                            coroutineScope.launch {
+                                delay(800)
+                                nudged[playerName] = false
+                            }
+                        }
+                    }
                     .zIndex(1f)
             ) {
                 Image(
@@ -1294,7 +1313,6 @@ private fun PlayerPositions(
             }
         }
     }
-
 
     playerPositions[userSessionVm.getMrXName()]?.let { positionId ->
         LaunchedEffect(positionId) {
@@ -1313,17 +1331,35 @@ private fun PlayerPositions(
             val xDp = with(density) { (animatedX * scaleMapX).toDp() }
             val yDp = with(density) { (animatedY * scaleMapY).toDp() }
 
-            Image(
-                painter = painterResource(R.drawable.mrx_shadow),
-                contentDescription = "Position von Mr. X (Schatten)",
-                modifier = Modifier
-                    .size(iconSizeDp)
-                    .offset(xDp - (iconSizeDp * 1.2f) / 2, yDp - (iconSizeDp * 1.2f) / 2),
-                contentScale = ContentScale.Fit
+            val nudgeX by animateDpAsState(
+                targetValue = if (nudged["mrX_shadow"] == true) iconSizeDp * .6f else 0.dp,
+                animationSpec = tween(300),
+                label = "nd_mrX_shadow"
             )
+
+            Box(
+                modifier = Modifier
+                    .offset(xDp - (iconSizeDp * 1.2f) / 2 + nudgeX, yDp - (iconSizeDp * 1.2f) / 2)
+                    .size(iconSizeDp)
+                    .clickable {
+                        if (nudged["mrX_shadow"] != true) {
+                            nudged["mrX_shadow"] = true
+                            coroutineScope.launch {
+                                delay(800)
+                                nudged["mrX_shadow"] = false
+                            }
+                        }
+                    }
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.mrx_shadow),
+                    contentDescription = "Position von Mr. X (Schatten)",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
     }
-
 
     if (userSessionVm.role.value == "MRX") {
         mrXPosition?.let { positionId ->
@@ -1350,6 +1386,8 @@ private fun PlayerPositions(
         }
     }
 }
+
+
 
 @Composable
 fun WinnerOverlay(
@@ -1489,22 +1527,37 @@ fun TicketImage(ticket: String) {
 
 @Composable
 fun TicketBar(tickets: Map<String, Int>) {
+
+    var anyPressed by remember { mutableStateOf(false) }
+
+
+    val raise by animateDpAsState(
+        targetValue = if (anyPressed) (-20).dp else 0.dp,
+        label = "rowRaise"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp) // sichtbarer Bereich
-            .offset(y = 40.dp) //nach unten verschieben
+            .height(80.dp)     // sichtbarer Bereich
+            .offset(y = 40.dp) // Grund-Position weiter unten
     ) {
         Row(
-            modifier = Modifier.align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.spacedBy((-20).dp) // Überlappung
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = raise),
+            horizontalArrangement = Arrangement.spacedBy((-20).dp)
         ) {
             var z = 0f
             tickets.entries.sortedBy { it.key }.forEach { (ticket, count) ->
                 TicketWithCount(
-                    ticket = ticket,
-                    count = count,
-                    modifier = Modifier.zIndex(z++)
+                    ticket       = ticket,
+                    count        = count,
+                    modifier     = Modifier.zIndex(z++),
+                    enlargeAll   = anyPressed,
+                    onPressChanged = { pressed ->
+                        anyPressed = pressed
+                    }
                 )
             }
         }
@@ -1512,82 +1565,103 @@ fun TicketBar(tickets: Map<String, Int>) {
 }
 
 
+
+
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun TicketWithCount(
     ticket: String,
     count: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enlargeAll: Boolean = false,
+    onPressChanged: ((Boolean) -> Unit)? = null
+    //    ob gerade gedrückt wird
 ) {
+    // ───────── Ticket-Grafik wählen ─────────
     val ticketRes = when (ticket.uppercase()) {
-        "TAXI" -> R.drawable.ticket_taxi
-        "BUS" -> R.drawable.ticket_bus
+        "TAXI"        -> R.drawable.ticket_taxi
+        "BUS"         -> R.drawable.ticket_bus
         "UNDERGROUND" -> R.drawable.ticket_under
-        "BLACK" -> R.drawable.ticket_black
-        "DOUBLE" -> R.drawable.ticket_double
-        else -> null
+        "BLACK"       -> R.drawable.ticket_black
+        "DOUBLE"      -> R.drawable.ticket_double
+        else          -> null
     }
 
-    ticketRes?.let {
-        val configuration = LocalConfiguration.current
-        val screenWidthDp = configuration.screenWidthDp
-
-
+    ticketRes?.let { resId ->
+        // ───────── Responsive Grundgrößen ─────────
+        val screenWidthDp = LocalConfiguration.current.screenWidthDp
         val ticketWidth = when {
-            screenWidthDp < 400 -> 60.dp
-            screenWidthDp < 600 -> 72.dp
-            else -> 96.dp
+            screenWidthDp < 400 -> 44.dp
+            screenWidthDp < 600 -> 60.dp
+            else                -> 80.dp
         }
         val ticketHeight = ticketWidth * (4f / 3f)
 
-
-        val badgeOffsetX = ticketWidth * -0.7f
-        val badgeOffsetY = ticketWidth * 0.05f
-        val fontSize = (ticketWidth.value * 0.2f).sp
+        // ───────── Badge-Parameter ─────────
+        val badgeOffsetX  = ticketWidth * -0.7f
+        val badgeOffsetY  = ticketWidth * 0.05f
+        val fontSize      = (ticketWidth.value * 0.2f).sp
         val badgePaddingH = ticketWidth * 0.1f
         val badgePaddingV = ticketWidth * 0.06f
 
+        // ───────── Animations-States ─────────
         var previousCount by remember { mutableStateOf(count) }
-        var animateScale by remember { mutableStateOf(false) }
+        var animateScale  by remember { mutableStateOf(false) }
+        var isPressed     by remember { mutableStateOf(false) }   // ← lokal gedrückt?
 
-        val scale by animateFloatAsState(
-            targetValue = if (animateScale) 1.2f else 1f,
-            animationSpec = tween(durationMillis = 300),
-            label = "scaleOnTicketChange"
-        )
-
+        // Count-Änderung: kurz boosten
         LaunchedEffect(count) {
             if (count != previousCount) {
-                animateScale = true
+                animateScale  = true
                 previousCount = count
                 delay(300)
-                animateScale = false
+                animateScale  = false
             }
         }
 
+        // Gemeinsames Skalierungs-Target
+        val scale by animateFloatAsState(
+            targetValue = if (animateScale || isPressed || enlargeAll) 1.25f else 1f,
+            animationSpec = tween(durationMillis = 300),
+            label = "ticketScale"
+        )
+
+        // ───────── UI-Aufbau ─────────
         Box(
             contentAlignment = Alignment.TopEnd,
             modifier = modifier
-                .size(width = ticketWidth, height = ticketHeight)
+                .size(ticketWidth, ticketHeight)
                 .graphicsLayer {
                     rotationZ = -8f
-                    scaleX = scale
-                    scaleY = scale
+                    scaleX    = scale
+                    scaleY    = scale
+                }
+                // ➌ Druck-Erkennung & Callback
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            onPressChanged?.invoke(true)
+                            tryAwaitRelease()
+                            isPressed = false
+                            onPressChanged?.invoke(false)
+                        }
+                    )
                 }
         ) {
             // 🎫 Ticket-Bild
             Image(
-                painter = painterResource(id = it),
+                painter = painterResource(id = resId),
                 contentDescription = ticket,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit
             )
 
-            // 🔢 Anzahl-Badge oben rechts
+            // 🔢 Count-Badge
             Box(
                 modifier = Modifier
-                    .offset(x = badgeOffsetX, y = badgeOffsetY)
-                    .background(Color.Black, shape = CircleShape)
+                    .offset(badgeOffsetX, badgeOffsetY)
+                    .background(Color.Black, CircleShape)
                     .padding(horizontal = badgePaddingH, vertical = badgePaddingV)
             ) {
                 AnimatedContent(
@@ -1617,6 +1691,8 @@ fun TicketWithCount(
 
 
 
+
+
 @Composable
 fun ExpandableTicketStackAnimated(
     gameVm: GameViewModel,
@@ -1627,15 +1703,17 @@ fun ExpandableTicketStackAnimated(
 
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val baseSize = when {
-        screenWidthDp < 400 -> 72.dp
-        screenWidthDp < 600 -> 96.dp
-        else -> 120.dp
+        screenWidthDp < 360 -> 56.dp  // Sehr kleine Displays
+        screenWidthDp < 400 -> 70.dp  // Kleine Displays
+        screenWidthDp < 600 -> 90.dp  // Mittelgroß
+        else -> 110.dp                // Groß/Tablet
     }
+
     val ticketWidth = baseSize
     val ticketHeight = baseSize / 2
 
-    val offsetShort = -ticketWidth * 0.9f     // -80.dp → dynamisch
-    val offsetLong  = ticketWidth * 1.05f     // 100.dp → dynamisch
+    val offsetShort = -ticketWidth * 0.8f
+    val offsetLong  = ticketWidth * 1.05f
 
     val transition = updateTransition(expanded, label = "ticket_expand")
 
@@ -1689,15 +1767,15 @@ fun ExpandableTicketStackAnimated(
                 },
                 modifier = Modifier
                     .offset(x = ticketWidth * 2f, y = 10.dp)
-                    .size(32.dp),
+                    .size(40.dp),
                 colors = IconButtonDefaults.iconButtonColors(
                     containerColor = Color.Transparent
                 )
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Einklappen",
-                    tint = Color.Black
+                    modifier = Modifier.size(100.dp)
                 )
             }
         }
