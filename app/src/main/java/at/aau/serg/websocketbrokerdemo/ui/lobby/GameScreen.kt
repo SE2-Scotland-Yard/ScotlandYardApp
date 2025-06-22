@@ -35,7 +35,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -75,21 +75,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
-
 import androidx.compose.ui.text.font.FontWeight
-
 import androidx.media3.common.util.UnstableApi
-
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 import androidx.compose.ui.unit.IntSize
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
+
 
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -120,10 +115,6 @@ fun GameScreen(
     var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     val myPosition = gameUpdate?.playerPositions?.get(username)
-
-    val scrollStateX = rememberScrollState()
-
-
     val context = LocalContext.current
 
 
@@ -1629,7 +1620,7 @@ fun TicketWithCount(
                     )
                 }
         ) {
-            // 🎫 Ticket-Bild
+
             Image(
                 painter = painterResource(id = resId),
                 contentDescription = ticket,
@@ -1637,7 +1628,7 @@ fun TicketWithCount(
                 contentScale = ContentScale.Fit
             )
 
-            // 🔢 Count-Badge
+
             Box(
                 modifier = Modifier
                     .offset(badgeOffsetX, badgeOffsetY)
