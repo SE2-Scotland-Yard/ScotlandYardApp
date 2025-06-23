@@ -145,7 +145,7 @@ fun GameScreen(
     val showCheatHint = remember { mutableStateOf(false) }
 
     var showLoadingOverlay by remember { mutableStateOf(true) }
-    var showEasterEgg by remember { mutableStateOf(false)}
+    var showVideo by remember { mutableStateOf(false) }
 
 
     DisposableEffect(Unit) {
@@ -201,19 +201,6 @@ fun GameScreen(
     LaunchedEffect(playerPositions) {
         previousPlayerPositions = playerPositions
     }
-
-    LaunchedEffect(userSessionVm.showEgg.value) {
-        Log.d("GameScreen unlocked", "GameScreen unlocked: ${userSessionVm.showEgg}")
-        if(userSessionVm.showEgg.value){
-            Log.d("GameScreen unlocked", "GameScreen unlocked: ${showEasterEgg}")
-            showEasterEgg = true
-            Log.d("VIDEO_DEBUG", "showEgg changed to: ${userSessionVm.showEgg}")
-
-        }
-
-
-    }
-
 
     // Moves nach dem Join laden
     LaunchedEffect(gameId, username) {
@@ -371,7 +358,9 @@ fun GameScreen(
                 ) {
                     TicketBar(
                         tickets = myTickets,
-                        userSessionVm = UserSessionViewModel()
+                        onVideoPlaybackRequested = {
+                            showVideo = true // Diese Logik bleibt im GameScreen
+                        }
                     )
                 }
             }
@@ -685,7 +674,7 @@ fun GameScreen(
         }
 
         AnimatedVisibility(
-            visible = showEasterEgg,
+            visible = showVideo,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
@@ -701,7 +690,7 @@ fun GameScreen(
                     modifier = Modifier.fillMaxWidth(),
                     looping = false,
                     onVideoEnd = {
-                        showEasterEgg = false
+                        showVideo = false
                     }
                 )
             }
@@ -1533,7 +1522,7 @@ fun TicketImage(ticket: String) {
 @Composable
 fun TicketBar(
     tickets: Map<String, Int>,
-    userSessionVm: UserSessionViewModel
+    onVideoPlaybackRequested: (() -> Unit)? = null
     )
     {
 
@@ -1567,7 +1556,7 @@ fun TicketBar(
                     onPressChanged = { pressed ->
                         anyPressed = pressed
                     },
-                    userSessionVm = UserSessionViewModel()
+                    onVideoPlaybackRequested = onVideoPlaybackRequested
                 )
             }
         }
@@ -1585,7 +1574,7 @@ fun TicketWithCount(
     modifier: Modifier = Modifier,
     enlargeAll: Boolean = false,
     onPressChanged: ((Boolean) -> Unit)? = null,
-    userSessionVm: UserSessionViewModel
+    onVideoPlaybackRequested: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     // ───────── Ticket-Grafik wählen ─────────
@@ -1670,7 +1659,7 @@ fun TicketWithCount(
                                     playSound(context, R.raw.v3)
                                 }
                                 if (clickCount >= 15 && !eggUnlocked) {
-                                    userSessionVm.setShowEgg(true)
+                                    onVideoPlaybackRequested?.invoke()
 
 
                                     eggUnlocked = true
