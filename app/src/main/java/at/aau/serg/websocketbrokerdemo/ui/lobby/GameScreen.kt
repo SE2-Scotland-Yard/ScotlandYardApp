@@ -135,18 +135,6 @@ fun GameScreen(
 
     var showLoadingOverlay by remember { mutableStateOf(true) }
 
-    val playerPos = remember(gameUpdate, username, userSessionVm.role.value, mrXPosition) {
-        if (userSessionVm.role.value == "MRX") {
-
-            val position = mrXPosition ?: gameUpdate?.playerPositions?.get(userSessionVm.getMrXName())
-            position?.let { gameVm.pointPositions[it] }
-        } else {
-
-            gameUpdate?.playerPositions?.get(username)?.let { gameVm.pointPositions[it] }
-        }
-    }
-
-
 
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Activity.SENSOR_SERVICE) as SensorManager
@@ -338,7 +326,7 @@ fun GameScreen(
                     showMrXHistory = !showMrXHistory
                 },
 
-                playerPos = playerPos,
+
                 gameId = gameId,
                 username = username
             )
@@ -678,14 +666,12 @@ private fun BoxScope.BottomBar(
     userSessionVm: UserSessionViewModel,
     showMrXHistory: Boolean,
     onToggleHistory: () -> Unit,
-    playerPos: Pair<Int, Int>?,
     gameId: String,
     username: String?
 
 ) {
 
     fun adjustZoom(newScale: Float) {
-        playerPos?.let { (x, y) ->
 
             gameVm.scale = newScale.coerceIn(0.5f, 3f)
 
@@ -693,7 +679,7 @@ private fun BoxScope.BottomBar(
             CoroutineScope(Dispatchers.Main).launch {
 
             }
-        }
+
     }
 
 
@@ -1175,6 +1161,7 @@ private fun Stations(
 }
 
 
+@SuppressLint("UseOfNonLambdaOffsetOverload")
 @Composable
 private fun PlayerPositions(
     gameVm: GameViewModel,
@@ -1503,6 +1490,7 @@ fun TicketImage(ticket: String) {
 }
 
 
+@SuppressLint("UseOfNonLambdaOffsetOverload")
 @Composable
 fun TicketBar(tickets: Map<String, Int>) {
 
