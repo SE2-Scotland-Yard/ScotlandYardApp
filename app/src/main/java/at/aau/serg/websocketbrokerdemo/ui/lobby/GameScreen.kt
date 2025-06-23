@@ -218,7 +218,9 @@ fun GameScreen(
         if (username != null && gameUpdate?.currentPlayer == username) {
             gameVm.fetchAllowedMoves(gameId, username)
             gameVm.fetchMrXPosition(gameId, username)
+
         }
+
     }
 
     LaunchedEffect(navigateToLobby) {
@@ -244,6 +246,11 @@ fun GameScreen(
         if (username != null) {
 
             gameVm.fetchMrXPosition(gameId, username)
+
+            gameVm.fetchMrXHistory(gameId) { history ->
+                mrXHistory = history
+            }
+
             if (gameUpdate?.currentPlayer != username) {
                 gameVm.resetMoveModes()
             }
@@ -1546,7 +1553,6 @@ fun TicketWithCount(
     modifier: Modifier = Modifier,
     enlargeAll: Boolean = false,
     onPressChanged: ((Boolean) -> Unit)? = null
-    //    ob gerade gedrückt wird
 ) {
     // ───────── Ticket-Grafik wählen ─────────
     val ticketRes = when (ticket.uppercase()) {
@@ -1559,6 +1565,12 @@ fun TicketWithCount(
     }
 
     ticketRes?.let { resId ->
+
+        // ───────── Easter Egg States ─────────
+        var clickCount by remember { mutableStateOf(0) }
+        var lastClickTime by remember { mutableStateOf(0L) }
+        var eggUnlocked by remember { mutableStateOf(false) }
+
         // ───────── Responsive Grundgrößen ─────────
         val screenWidthDp = LocalConfiguration.current.screenWidthDp
         val ticketWidth = when {
@@ -1578,9 +1590,8 @@ fun TicketWithCount(
         // ───────── Animations-States ─────────
         var previousCount by remember { mutableStateOf(count) }
         var animateScale  by remember { mutableStateOf(false) }
-        var isPressed     by remember { mutableStateOf(false) }   // ← lokal gedrückt?
+        var isPressed     by remember { mutableStateOf(false) }
 
-        // Count-Änderung: kurz boosten
         LaunchedEffect(count) {
             if (count != previousCount) {
                 animateScale  = true
@@ -1590,7 +1601,6 @@ fun TicketWithCount(
             }
         }
 
-        // Gemeinsames Skalierungs-Target
         val scale by animateFloatAsState(
             targetValue = if (animateScale || isPressed || enlargeAll) 1.25f else 1f,
             animationSpec = tween(durationMillis = 300),
@@ -1607,12 +1617,25 @@ fun TicketWithCount(
                     scaleX    = scale
                     scaleY    = scale
                 }
-                // ➌ Druck-Erkennung & Callback
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
                             isPressed = true
                             onPressChanged?.invoke(true)
+
+                            val now = System.currentTimeMillis()
+                            if (now - lastClickTime <= 3000) {
+                                clickCount++
+                                if (clickCount >= 10 && !eggUnlocked) {
+                                    eggUnlocked = true
+                                    println("Easter Egg unlocked!")
+
+                                }
+                            } else {
+                                clickCount = 1
+                            }
+                            lastClickTime = now
+
                             tryAwaitRelease()
                             isPressed = false
                             onPressChanged?.invoke(false)
@@ -1620,14 +1643,12 @@ fun TicketWithCount(
                     )
                 }
         ) {
-
             Image(
                 painter = painterResource(id = resId),
                 contentDescription = ticket,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit
             )
-
 
             Box(
                 modifier = Modifier
@@ -1653,6 +1674,7 @@ fun TicketWithCount(
         }
     }
 }
+
 
 
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.R
 
@@ -74,7 +75,13 @@ fun JoinLobbyScreen(
             ) {
                 OutlinedTextField(
                     value = gameId,
-                    onValueChange = { gameId = it },
+                    onValueChange = {
+                        if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                            gameId = it
+                        }
+                    },
+
+
                     label = { Text("Lobby‑ID") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -84,8 +91,10 @@ fun JoinLobbyScreen(
                         focusedBorderColor = MaterialTheme.colorScheme.primary
                     ),
                     keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Done // "Fertig" auf der Tastatur anzeigen
+                        imeAction = ImeAction.Done,
+                        keyboardType = KeyboardType.Number
                     ),
+
                     keyboardActions = KeyboardActions(
                         onDone = {
                             if (gameId.isNotBlank()) {
