@@ -146,6 +146,7 @@ fun GameScreen(
 
     var showLoadingOverlay by remember { mutableStateOf(true) }
     var showVideo by remember { mutableStateOf(false) }
+    var isEasterEggActive by remember { mutableStateOf(false) }
 
 
     DisposableEffect(Unit) {
@@ -321,7 +322,8 @@ fun GameScreen(
                 mrXPosition = mrXPosition,
                 gameUpdate = gameUpdate,
                 showCheatArrow = showCheatArrow,
-                mrxXY = mrxXY
+                mrxXY = mrxXY,
+                isEasterEggActive = isEasterEggActive
             )
 
             BottomBar(
@@ -693,6 +695,7 @@ fun GameScreen(
                         showVideo = false
                     }
                 )
+                isEasterEggActive = true
             }
         }
 
@@ -793,7 +796,9 @@ fun Map(
     mrXPosition: Int?,
     gameUpdate: GameUpdate?,
     mrxXY: Pair<Float, Float>,
-    showCheatArrow: Boolean
+    showCheatArrow: Boolean,
+    isEasterEggActive : Boolean
+
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -961,7 +966,8 @@ fun Map(
                         mrXPosition     = mrXPosition,
                         gameUpdate      = gameUpdate,
                         scaleMapX       = scaleX,
-                        scaleMapY       = scaleY
+                        scaleMapY       = scaleY,
+                        isEasterEggActive = isEasterEggActive
                     )
 
                     if (showCheatArrow && username != null) {
@@ -1211,7 +1217,8 @@ private fun PlayerPositions(
     mrXPosition: Int?,
     gameUpdate: GameUpdate?,
     scaleMapX: Float,
-    scaleMapY: Float
+    scaleMapY: Float,
+    isEasterEggActive: Boolean = false
 ) {
     val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
 
@@ -1229,10 +1236,19 @@ private fun PlayerPositions(
 
 
     fun getIconForPlayer(name: String): Int {
-        return if (userSessionVm.isMrX(name)) {
-            R.drawable.mrx
+
+        return if (isEasterEggActive) {
+            when {
+                userSessionVm.isMrX(name) -> R.drawable.mrx_m
+                else -> userSessionVm.getAvatarDrawableResm(name)
+            }
         } else {
-            userSessionVm.getAvatarDrawableRes(name)
+
+            if (userSessionVm.isMrX(name)) {
+                R.drawable.mrx
+            } else {
+                userSessionVm.getAvatarDrawableRes(name)
+            }
         }
     }
 
@@ -1345,7 +1361,7 @@ private fun PlayerPositions(
                     }
             ) {
                 Image(
-                    painter = painterResource(R.drawable.mrx_shadow),
+                    painter = painterResource(if(isEasterEggActive){R.drawable.mrx_m}else{R.drawable.mrx_shadow}),
                     contentDescription = "Position von Mr. X (Schatten)",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
@@ -1364,7 +1380,7 @@ private fun PlayerPositions(
                 val yDp = with(density) { (animatedY * scaleMapY).toDp() }
 
                 Image(
-                    painter = painterResource(R.drawable.mrx),
+                    painter = painterResource(if(isEasterEggActive){R.drawable.mrx_m}else{R.drawable.mrx}),
                     contentDescription = "Position von Mr.X",
                     modifier = Modifier
                         .size(iconSizeDp)
