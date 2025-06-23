@@ -1174,22 +1174,20 @@ private fun PlayerPositions(
 ) {
     val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
 
-    var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
-    var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var previousMrXShadowPosition by remember { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val nudged = remember { mutableStateMapOf<String, Boolean>() }
 
-    LaunchedEffect(playerPositions) {
-        previousPlayerPositions = playerPositions
-    }
+
 
     fun playSound(context: Context, @RawRes soundResId: Int) {
         try {
             val mediaPlayer = MediaPlayer.create(context, soundResId)
             mediaPlayer?.apply {
+                setOnCompletionListener { mp -> mp.release() }
                 setOnCompletionListener { mp -> mp.release() }
                 start()
             }
@@ -1342,9 +1340,6 @@ private fun PlayerPositions(
                     contentScale = ContentScale.Fit
                 )
 
-                LaunchedEffect(positionId) {
-                    lastMrXPosition = xPx.toFloat() to yPx.toFloat()
-                }
             }
         }
     }
@@ -1364,11 +1359,7 @@ fun WinnerOverlay(
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
 
 
-    val backgroundColor = when {
-        isMrXWinner && isCurrentPlayerMrX -> Color(0xFF4CAF50)
-        !isMrXWinner && !isCurrentPlayerMrX -> Color(0xFF4CAF50)
-        else -> Color(0xFFF44336)
-    }
+    val backgroundColor = getBackgroundColor(isMrXWinner, isCurrentPlayerMrX)
 
     val title = when {
         isMrXWinner && isCurrentPlayerMrX -> "Mr. X hat gewonnen!"
@@ -1466,6 +1457,11 @@ fun WinnerOverlay(
     }
 
 }
+
+private fun getBackgroundColor(isMrXWinner: Boolean, isCurrentPlayerMrX: Boolean): Color {
+    return if (isMrXWinner == isCurrentPlayerMrX) Color(0xFF4CAF50) else Color(0xFFF44336)
+}
+
 
 @Composable
 fun TicketImage(ticket: String) {
@@ -1672,6 +1668,7 @@ fun TicketWithCount(
 
 
 
+@SuppressLint("UnusedTransitionTargetStateParameter")
 @Composable
 fun ExpandableTicketStackAnimated(
     gameVm: GameViewModel,
@@ -1697,7 +1694,8 @@ fun ExpandableTicketStackAnimated(
     val transition = updateTransition(expanded, label = "ticket_expand")
 
     val blackX  by transition.animateDp(label = "blackX")  { if (it) 0.dp else offsetShort }
-    val blackY  by transition.animateDp(label = "blackY")  { if (it) 0.dp else 0.dp }
+    val blackY by transition.animateDp(label = "blackY") { 0.dp }
+
     val blackRot by transition.animateFloat(label = "blackRot") { if (it) 0f else -15f }
 
     val doubleX by transition.animateDp(label = "doubleX") { if (it) offsetLong else offsetShort }
