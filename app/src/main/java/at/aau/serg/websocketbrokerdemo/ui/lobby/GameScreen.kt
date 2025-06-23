@@ -85,6 +85,17 @@ import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 import androidx.compose.ui.unit.IntSize
 
+fun playSound(context: Context, @RawRes soundResId: Int) {
+    try {
+        val mediaPlayer = MediaPlayer.create(context, soundResId)
+        mediaPlayer?.apply {
+            setOnCompletionListener { mp -> mp.release() }
+            start()
+        }
+    } catch (e: Exception) {
+        Log.e("SoundPlayback", "Fehler beim Abspielen des Sounds: ${e.message}")
+    }
+}
 
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -134,6 +145,7 @@ fun GameScreen(
     val showCheatHint = remember { mutableStateOf(false) }
 
     var showLoadingOverlay by remember { mutableStateOf(true) }
+    var showEasterEgg by remember { mutableStateOf(false)}
 
 
     DisposableEffect(Unit) {
@@ -188,6 +200,18 @@ fun GameScreen(
 
     LaunchedEffect(playerPositions) {
         previousPlayerPositions = playerPositions
+    }
+
+    LaunchedEffect(userSessionVm.showEgg.value) {
+        Log.d("GameScreen unlocked", "GameScreen unlocked: ${userSessionVm.showEgg}")
+        if(userSessionVm.showEgg.value){
+            Log.d("GameScreen unlocked", "GameScreen unlocked: ${showEasterEgg}")
+            showEasterEgg = true
+            Log.d("VIDEO_DEBUG", "showEgg changed to: ${userSessionVm.showEgg}")
+
+        }
+
+
     }
 
 
@@ -345,7 +369,10 @@ fun GameScreen(
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 8.dp)
                 ) {
-                    TicketBar(tickets = myTickets)
+                    TicketBar(
+                        tickets = myTickets,
+                        userSessionVm = UserSessionViewModel()
+                    )
                 }
             }
 
@@ -653,6 +680,29 @@ fun GameScreen(
                         showLoadingOverlay = false
                     }
 
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showEasterEgg,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(), contentAlignment = Alignment.Center
+            ) {
+                VideoPlayerComposable(
+                    videoUri = "file:///android_asset/mine.mp4",
+                    modifier = Modifier.fillMaxWidth(),
+                    looping = false,
+                    onVideoEnd = {
+                        showEasterEgg = false
+                    }
                 )
             }
         }
@@ -1188,17 +1238,6 @@ private fun PlayerPositions(
         previousPlayerPositions = playerPositions
     }
 
-    fun playSound(context: Context, @RawRes soundResId: Int) {
-        try {
-            val mediaPlayer = MediaPlayer.create(context, soundResId)
-            mediaPlayer?.apply {
-                setOnCompletionListener { mp -> mp.release() }
-                start()
-            }
-        } catch (e: Exception) {
-            Log.e("SoundPlayback", "Fehler beim Abspielen des Sounds: ${e.message}")
-        }
-    }
 
     fun getIconForPlayer(name: String): Int {
         return if (userSessionVm.isMrX(name)) {
@@ -1492,7 +1531,11 @@ fun TicketImage(ticket: String) {
 
 @SuppressLint("UseOfNonLambdaOffsetOverload")
 @Composable
-fun TicketBar(tickets: Map<String, Int>) {
+fun TicketBar(
+    tickets: Map<String, Int>,
+    userSessionVm: UserSessionViewModel
+    )
+    {
 
     var anyPressed by remember { mutableStateOf(false) }
 
@@ -1523,7 +1566,8 @@ fun TicketBar(tickets: Map<String, Int>) {
                     enlargeAll   = anyPressed,
                     onPressChanged = { pressed ->
                         anyPressed = pressed
-                    }
+                    },
+                    userSessionVm = UserSessionViewModel()
                 )
             }
         }
@@ -1540,8 +1584,10 @@ fun TicketWithCount(
     count: Int,
     modifier: Modifier = Modifier,
     enlargeAll: Boolean = false,
-    onPressChanged: ((Boolean) -> Unit)? = null
+    onPressChanged: ((Boolean) -> Unit)? = null,
+    userSessionVm: UserSessionViewModel
 ) {
+    val context = LocalContext.current
     // ───────── Ticket-Grafik wählen ─────────
     val ticketRes = when (ticket.uppercase()) {
         "TAXI"        -> R.drawable.ticket_taxi
@@ -1614,7 +1660,19 @@ fun TicketWithCount(
                             val now = System.currentTimeMillis()
                             if (now - lastClickTime <= 3000) {
                                 clickCount++
-                                if (clickCount >= 10 && !eggUnlocked) {
+                                if (clickCount in 6..6 && !eggUnlocked) {
+                                    playSound(context, R.raw.v1)
+                                }
+                                if (clickCount in 9..9 && !eggUnlocked) {
+                                    playSound(context, R.raw.v2)
+                                }
+                                if (clickCount in 12..12 && !eggUnlocked) {
+                                    playSound(context, R.raw.v3)
+                                }
+                                if (clickCount >= 15 && !eggUnlocked) {
+                                    userSessionVm.setShowEgg(true)
+
+
                                     eggUnlocked = true
                                     println("Easter Egg unlocked!")
 

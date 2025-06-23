@@ -3,8 +3,12 @@ package at.aau.serg.websocketbrokerdemo.viewmodel
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.util.Log
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import at.aau.serg.websocketbrokerdemo.model.Avatar
 import com.example.myapplication.R
@@ -17,6 +21,7 @@ class UserSessionViewModel : ViewModel() {
 
     val avatarIds = mutableStateMapOf<String, Int>()
     val roles = mutableStateMapOf<String, String>()
+    var showEgg = mutableStateOf(false )
 
     fun getAvatarDrawableRes(playerName: String): Int {
         return if (playerName.startsWith("[BOT")) {
@@ -26,7 +31,11 @@ class UserSessionViewModel : ViewModel() {
         }
     }
 
-
+    fun setShowEgg(value: Boolean) {
+        println("EGG AUF TRUE unlocked!")
+        showEgg.value = value
+        Log.d("EGG AUF TRUE unlocked!", "LAUNCH unlocked: ${showEgg}")
+    }
     fun isMrX(playerName: String): Boolean {
         return roles[playerName] == "MRX"
     }
