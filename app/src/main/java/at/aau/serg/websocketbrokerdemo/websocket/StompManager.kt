@@ -18,7 +18,7 @@ import org.json.JSONObject
 class StompManager {
 
     companion object {
-        private const val WS_URL = "ws://10.0.2.2:8080/ws-stomp"
+        private const val WS_URL = "ws://se2-demo.aau.at:53215/ws-stomp"
     }
 
     private val client = StompClient(OkHttpWebSocketClient())
