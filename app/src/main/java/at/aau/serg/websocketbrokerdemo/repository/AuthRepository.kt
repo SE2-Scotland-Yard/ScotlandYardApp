@@ -6,7 +6,7 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 
 class AuthRepository(
     private val api: AuthApi = Retrofit.Builder()
-        .baseUrl("http://10.0.2.2:8080/") // Emulator → localhost
+        .baseUrl("http://se2-demo.aau.at:53215/") // Emulator → localhost
         .addConverterFactory(ScalarsConverterFactory.create())
         .build()
         .create(AuthApi::class.java)

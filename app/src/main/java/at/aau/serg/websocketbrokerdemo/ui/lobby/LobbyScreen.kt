@@ -371,6 +371,8 @@ fun LobbyScreen(
                     val isReadyEnabled = !lobby.isStarted && hasRole && hasAvatar
 
                     if (!lobby.isStarted) {
+                        val ready = lobby.readyStatus[currentUsername] == true
+
                         Button(
                             onClick = {
                                 lobbyVm.sendReady(gameId, currentPlayer)
@@ -378,12 +380,16 @@ fun LobbyScreen(
                             },
                             enabled = isReadyEnabled,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = colorResource(id = R.color.buttonStartScreen),
+                                containerColor = if (ready)
+                                    Color(0xFF90EE90).copy(alpha = 0.6f)
+                                else
+                                    colorResource(id = R.color.buttonStartScreen),
                                 contentColor = Color.Black
                             )
                         ) {
                             Text("Bereit")
                         }
+
 
                         if (!hasRole) {
                             Text(
@@ -428,7 +434,7 @@ fun LobbyScreen(
             CircularProgressIndicator()
         }
 
-        val avatars = Avatar.values().toList()
+        val avatars = Avatar.entries
 
 
         var selectedAvatar by remember { mutableStateOf(userSessionVm.avatarResId) }

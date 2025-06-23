@@ -10,7 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class GameRepository(
     private val api: GameApi = Retrofit.Builder()
-        .baseUrl("http://10.0.2.2:8080/")
+        .baseUrl("http://se2-demo.aau.at:53215/")
         .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(GameApi::class.java)
