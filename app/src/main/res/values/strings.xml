@@ -5,7 +5,4 @@
     <string name="title_activity_connection_view">ConnectionView</string>
     <string name="title_activity_view">view</string>
     <string name="title_activity_main2">MainActivity2</string>
-    <string name="title_activity_start_screen">StartScreenActivity</string>
-    <string name="title_activity_map_screen">MapActivity</string>
-    <string name="title_activity_rule">RuleActivity</string>
 </resources>

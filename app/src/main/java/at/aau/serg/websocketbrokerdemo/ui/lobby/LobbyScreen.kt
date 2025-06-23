@@ -49,7 +49,7 @@ fun LobbyScreen(
 
 
 // Zeit der letzten Interaktion
-    var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
 // Dialog anzeigen
     var showIdleDialog by remember { mutableStateOf(false) }
