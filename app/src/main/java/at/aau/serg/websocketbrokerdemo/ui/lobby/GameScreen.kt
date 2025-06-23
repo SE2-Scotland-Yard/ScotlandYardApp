@@ -112,7 +112,7 @@ fun GameScreen(
     var showMrXHistory by remember { mutableStateOf(false) }
     var mrXHistory by remember { mutableStateOf<List<String>>(emptyList()) }
     var visibleTicket by remember { mutableStateOf<String?>(null) }
-    var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
 
     val myPosition = gameUpdate?.playerPositions?.get(username)
     val context = LocalContext.current
@@ -186,9 +186,7 @@ fun GameScreen(
         }
     }
 
-    LaunchedEffect(playerPositions) {
-        previousPlayerPositions = playerPositions
-    }
+
 
 
     // Moves nach dem Join laden
@@ -1555,8 +1553,8 @@ fun TicketWithCount(
     ticketRes?.let { resId ->
 
         // ───────── Easter Egg States ─────────
-        var clickCount by remember { mutableStateOf(0) }
-        var lastClickTime by remember { mutableStateOf(0L) }
+        var clickCount by remember { mutableIntStateOf(0) }
+        var lastClickTime by remember { mutableLongStateOf(0L) }
         var eggUnlocked by remember { mutableStateOf(false) }
 
         // ───────── Responsive Grundgrößen ─────────
@@ -1576,7 +1574,7 @@ fun TicketWithCount(
         val badgePaddingV = ticketWidth * 0.06f
 
         // ───────── Animations-States ─────────
-        var previousCount by remember { mutableStateOf(count) }
+        var previousCount by remember { mutableIntStateOf(count) }
         var animateScale  by remember { mutableStateOf(false) }
         var isPressed     by remember { mutableStateOf(false) }
 

@@ -11,14 +11,16 @@ import androidx.lifecycle.viewModelScope
 import at.aau.serg.websocketbrokerdemo.data.model.AllowedMoveResponse
 import at.aau.serg.websocketbrokerdemo.repository.GameRepository
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
-import kotlinx.coroutines.Dispatchers
+import at.aau.serg.websocketbrokerdemo.core.coroutines.CoroutineDispatcherProvider
+import at.aau.serg.websocketbrokerdemo.core.coroutines.DefaultDispatcherProvider
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
 class GameViewModel(
     val repository: GameRepository = GameRepository(),
-    context: Context
+    context: Context,
+    private val dispatcherProvider: CoroutineDispatcherProvider = DefaultDispatcherProvider()
 ) : ViewModel() {
 
     var message by mutableStateOf("")
@@ -138,7 +140,7 @@ class GameViewModel(
             val success = repository.leaveGame(gameId, playerId)
             if (success) {
                 stompManager.disconnect()
-                withContext(Dispatchers.Main) {
+                withContext(dispatcherProvider.main) {
                     onLeft()
                 }
             } else {

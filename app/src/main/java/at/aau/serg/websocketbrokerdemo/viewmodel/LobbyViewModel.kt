@@ -4,10 +4,11 @@ import LobbyRepository
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import at.aau.serg.websocketbrokerdemo.core.coroutines.CoroutineDispatcherProvider
+import at.aau.serg.websocketbrokerdemo.core.coroutines.DefaultDispatcherProvider
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import at.aau.serg.websocketbrokerdemo.websocket.StompManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +18,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class LobbyViewModel(
-    private val repository: LobbyRepository = LobbyRepository()
+    private val repository: LobbyRepository = LobbyRepository(),
+    private val dispatcherProvider: CoroutineDispatcherProvider = DefaultDispatcherProvider()
 ) : ViewModel() {
 
     private val _createdLobby = MutableStateFlow<LobbyState?>(null)
@@ -60,29 +62,35 @@ class LobbyViewModel(
     /**
      * 3) Lobby per REST beitreten → danach WS aufbauen
      */
-    suspend fun tryJoinLobby(gameId: String, playerName: String,context: Context): String {
-        return runCatching {
-            println("Versuche Lobby beizutreten: gameId=$gameId, playerName=$playerName")
+    fun tryJoinLobby(
+        gameId: String,
+        playerName: String,
+        context: Context,
+        onResult: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = runCatching {
+                println("Versuche Lobby beizutreten: gameId=$gameId, playerName=$playerName")
 
-            val joinResponse = repository.joinLobby(gameId, playerName)
-            if (joinResponse == null) {
-                println("Join fehlgeschlagen – joinResponse war null.")
-                return ""
+                val joinResponse = repository.joinLobby(gameId, playerName)
+                    ?: return@launch onResult("")
+
+                println("Beitritt erfolgreich, Antwort: ${joinResponse.message}")
+
+                fetchLobbyStatus(gameId) // ist eh schon korrekt mit launch
+                connectToLobby(gameId, context)
+
+                joinResponse.message
+            }.getOrElse {
+                println("Fehler beim Beitritt: ${it.message}")
+                it.printStackTrace()
+                ""
             }
 
-            println("Beitritt erfolgreich, Antwort: ${joinResponse.message}")
-
-            fetchLobbyStatus(gameId)
-            connectToLobby(gameId, context)
-
-            return joinResponse.message
-
-        }.getOrElse {
-            println("Fehler beim Beitritt: ${it.message}")
-            it.printStackTrace()
-            ""
+            onResult(result)
         }
     }
+
 
 
     /**
@@ -146,7 +154,7 @@ class LobbyViewModel(
         _createdLobby.value = null
         _lobbyStatus.value = null
 
-        withContext(Dispatchers.Main) {
+        withContext(dispatcherProvider.main) {
             onLeft()
         }
     }

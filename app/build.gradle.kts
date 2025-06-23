@@ -107,8 +107,8 @@ sonar {
 }
 
 dependencies {
-    implementation ("androidx.media3:media3-exoplayer:1.3.1")
-    implementation ("androidx.media3:media3-ui:1.3.1")
+    implementation (libs.androidx.media3.exoplayer)
+    implementation (libs.androidx.media3.ui)
 
     // --- AndroidX Core & Lifecycle ---
     implementation(libs.androidx.core.ktx)
@@ -116,7 +116,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx.v262)
 
     // --- Load Json ---
-    implementation("com.squareup.retrofit2:converter-gson:2.5.0")
+    implementation(libs.converter.gson.v250)
 
     // --- Compose & UI ---
     implementation(platform(libs.androidx.compose.bom))
@@ -125,7 +125,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.material3:material3:1.3.2")
+    implementation(libs.material3)
     implementation(libs.androidx.constraintlayout)
 
     // --- Navigation ---
