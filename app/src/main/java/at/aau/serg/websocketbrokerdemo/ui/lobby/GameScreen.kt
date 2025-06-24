@@ -740,17 +740,12 @@ private fun BoxScope.BottomBar(
 
 ) {
 
+    val minScale = 0.6f
+    val maxScale = 5f
+
     fun adjustZoom(newScale: Float) {
-
-            gameVm.scale = newScale.coerceIn(0.5f, 3f)
-
-
-            CoroutineScope(Dispatchers.Main).launch {
-
-            }
-
+        gameVm.scale = newScale.coerceIn(minScale, maxScale)
     }
-
 
 
     val spacermod = Modifier.width(12.dp)
@@ -784,7 +779,7 @@ private fun BoxScope.BottomBar(
 
         //Zoom
         Button(
-            onClick = { adjustZoom(gameVm.scale + 0.1f) },
+            onClick = { adjustZoom(gameVm.scale + 0.2f) },
             colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
         ) {
             Text("+")
@@ -792,7 +787,7 @@ private fun BoxScope.BottomBar(
         Spacer(spacermod)
 
         Button(
-            onClick = { adjustZoom(gameVm.scale - 0.1f)  },
+            onClick = { adjustZoom(gameVm.scale - 0.2f)  },
             colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.buttonBlue))
         ) {
             Text("-")
@@ -842,7 +837,7 @@ fun Map(
     var boardSize by remember { mutableStateOf(IntSize.Zero) }
 
     val minScale = 1f
-    val maxScale = 4f
+    val maxScale = 5f
 
     val transformState = rememberTransformableState { zoom, pan, _ ->
         val newScale = (gameVm.scale * zoom).coerceIn(minScale, maxScale)
