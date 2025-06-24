@@ -3,12 +3,12 @@ package at.aau.serg.websocketbrokerdemo.model
 import com.example.myapplication.R
 
 enum class Avatar_M(val id: Int, val drawableRes: Int) {
-    BEAR(11, R.drawable.bear_m),
-    PANDA(12, R.drawable.panda_m),
-    FOX(13, R.drawable.fox_m),
-    PIG(14, R.drawable.pig_m),
-    CROCODILE(15, R.drawable.crocodile_m),
-    DUCK(16, R.drawable.duck_m);
+    BEAR(1, R.drawable.bearm),
+    PANDA(2, R.drawable.pandam),
+    FOX(3, R.drawable.foxm),
+    PIG(4, R.drawable.pigm),
+    CROCODILE(5, R.drawable.crocodilem),
+    DUCK(6, R.drawable.duckm);
 
     companion object {
         fun fromId(id: Int): Avatar_M? = values().find { it.id == id }

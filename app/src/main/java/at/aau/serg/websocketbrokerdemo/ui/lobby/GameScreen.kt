@@ -500,7 +500,8 @@ fun GameScreen(
                     currentPlayerRole = userSessionVm.role.value,
                     onDismiss = { navigateToLobby = true  },
                     userSessionVm = userSessionVm,
-                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
+                    isEasterEggActive = isEasterEggActive
                 )
             }
 
@@ -1239,7 +1240,7 @@ private fun PlayerPositions(
 
         return if (isEasterEggActive) {
             when {
-                userSessionVm.isMrX(name) -> R.drawable.mrx_m
+                userSessionVm.isMrX(name) -> R.drawable.mrxm
                 else -> userSessionVm.getAvatarDrawableResm(name)
             }
         } else {
@@ -1361,7 +1362,7 @@ private fun PlayerPositions(
                     }
             ) {
                 Image(
-                    painter = painterResource(if(isEasterEggActive){R.drawable.mrx_m}else{R.drawable.mrx_shadow}),
+                    painter = painterResource(if(isEasterEggActive){R.drawable.mrxm_shadow}else{R.drawable.mrx_shadow}),
                     contentDescription = "Position von Mr. X (Schatten)",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
@@ -1380,7 +1381,7 @@ private fun PlayerPositions(
                 val yDp = with(density) { (animatedY * scaleMapY).toDp() }
 
                 Image(
-                    painter = painterResource(if(isEasterEggActive){R.drawable.mrx_m}else{R.drawable.mrx}),
+                    painter = painterResource(if(isEasterEggActive){R.drawable.mrxm}else{R.drawable.mrx}),
                     contentDescription = "Position von Mr.X",
                     modifier = Modifier
                         .size(iconSizeDp)
@@ -1404,7 +1405,8 @@ fun WinnerOverlay(
     currentPlayerRole: String?,
     onDismiss: () -> Unit,
     userSessionVm: UserSessionViewModel,
-    playerPositions: Map<String, Int>
+    playerPositions: Map<String, Int>,
+    isEasterEggActive : Boolean
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
@@ -1456,7 +1458,7 @@ fun WinnerOverlay(
                 if (isMrXWinner) {
                     // Nur MrX Icon
                     Image(
-                        painter = painterResource(id = R.drawable.mrx),
+                        painter = painterResource(id = if(isEasterEggActive){R.drawable.mrx}else{R.drawable.mrx_shadow}),
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
                         contentScale = ContentScale.Fit
@@ -1467,7 +1469,7 @@ fun WinnerOverlay(
                         .filterNot { userSessionVm.isMrX(it) }
                         .forEach { player ->
                             Image(
-                                painter = painterResource(id = userSessionVm.getAvatarDrawableRes(player)),
+                                painter = painterResource(id = if(isEasterEggActive){userSessionVm.getAvatarDrawableResm(player)}else{userSessionVm.getAvatarDrawableRes(player)} ),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(64.dp)
@@ -1676,11 +1678,7 @@ fun TicketWithCount(
                                 }
                                 if (clickCount >= 15 && !eggUnlocked) {
                                     onVideoPlaybackRequested?.invoke()
-
-
                                     eggUnlocked = true
-                                    println("Easter Egg unlocked!")
-
                                 }
                             } else {
                                 clickCount = 1
