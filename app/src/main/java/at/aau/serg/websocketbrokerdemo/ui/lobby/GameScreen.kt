@@ -298,17 +298,38 @@ fun GameScreen(
 
 
     Scaffold { paddingValues ->
-        Image(
-            modifier = Modifier.fillMaxSize(),
-            painter = painterResource(R.drawable.background1),
-            contentDescription = "background",
-            contentScale = ContentScale.Crop
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Hintergrundbild
+            Image(
+                modifier = Modifier.fillMaxSize(),
+                painter = painterResource(R.drawable.background3),
+                contentDescription = "background",
+                contentScale = ContentScale.Crop
+            )
+
+
+            val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomStart
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.avatarbottombar),
+                    contentDescription = "avatar detective",
+                    modifier = Modifier
+                        .padding(start = screenWidth * 0.1f)
+                        .size(100.dp)
+                )
+            }
+        }
+
+        // Haupt-UI mit Map etc.
         Box(
             modifier = Modifier
                 .padding(paddingValues)
+                .fillMaxSize()
         ) {
-
             Map(
                 gameVm = gameVm,
                 useSmallMap = useSmallMap,
@@ -1316,15 +1337,20 @@ private fun PlayerPositions(
                     }
                     .background(glowColor.copy(alpha = 0.4f), CircleShape)
                     .size(iconSizeDp)
-                    .clickable {
-                        if (nudged[playerName] != true) {
-                            nudged[playerName] = true
-                            coroutineScope.launch {
-                                delay(800)
-                                nudged[playerName] = false
+                    .then(
+                        if (playerName != userSessionVm.username.value) {
+                            Modifier.clickable {
+                                if (nudged[playerName] != true) {
+                                    nudged[playerName] = true
+                                    coroutineScope.launch {
+                                        delay(2000)
+                                        nudged[playerName] = false
+                                    }
+                                }
                             }
-                        }
-                    }
+                        } else Modifier
+                    )
+
                     .zIndex(1f)
             ) {
                 Image(
@@ -1368,15 +1394,7 @@ private fun PlayerPositions(
                 modifier = Modifier
                     .offset(xDp - (iconSizeDp * 1.2f) / 2 + nudgeX, yDp - (iconSizeDp * 1.2f) / 2)
                     .size(iconSizeDp)
-                    .clickable {
-                        if (nudged["mrX_shadow"] != true) {
-                            nudged["mrX_shadow"] = true
-                            coroutineScope.launch {
-                                delay(800)
-                                nudged["mrX_shadow"] = false
-                            }
-                        }
-                    }
+
             ) {
                 Image(
                     painter = painterResource(if(isEasterEggActive){R.drawable.mrxm_shadow}else{R.drawable.mrx_shadow}),
@@ -1410,6 +1428,7 @@ private fun PlayerPositions(
         }
     }
 }
+
 
 
 
