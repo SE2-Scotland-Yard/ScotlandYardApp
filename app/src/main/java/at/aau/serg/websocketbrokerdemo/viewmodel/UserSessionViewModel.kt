@@ -29,7 +29,7 @@ class UserSessionViewModel : ViewModel() {
     }
     fun getAvatarDrawableResm(playerName: String): Int {
         return if (playerName.startsWith("[BOT")) {
-            R.drawable.bearm
+            R.drawable.botm
 
         } else {
             Avatar_M.fromId((avatarIds[playerName] ?: 1))?.drawableRes ?: R.drawable.bear

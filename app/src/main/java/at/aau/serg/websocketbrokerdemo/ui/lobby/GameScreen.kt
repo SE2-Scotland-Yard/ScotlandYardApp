@@ -11,6 +11,7 @@ import android.media.MediaPlayer
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RawRes
+import androidx.collection.emptyLongSet
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -571,9 +572,16 @@ fun GameScreen(
 
             val currentPlayer = gameUpdate?.currentPlayer
 
+
             currentPlayer?.let { playerName ->
-                val avatarRes = if (userSessionVm.isMrX(playerName)) R.drawable.mrx
-                else userSessionVm.getAvatarDrawableRes(playerName)
+
+                val avatarRes = if(isEasterEggActive){
+                    if (userSessionVm.isMrX(playerName)) R.drawable.mrxm
+                    else userSessionVm.getAvatarDrawableResm(playerName)
+                }else{
+                    if (userSessionVm.isMrX(playerName)) R.drawable.mrx
+                    else userSessionVm.getAvatarDrawableRes(playerName)
+                }
 
                 Box(
                     modifier = Modifier
