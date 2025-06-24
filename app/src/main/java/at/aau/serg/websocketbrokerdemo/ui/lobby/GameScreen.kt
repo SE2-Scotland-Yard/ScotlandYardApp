@@ -11,7 +11,6 @@ import android.media.MediaPlayer
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RawRes
-import androidx.collection.emptyLongSet
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -158,8 +157,6 @@ fun GameScreen(
             Log.d("SHAKE", "Shake erkannt!")
 
             if (isMyTurn && username != "MrX" && myPosition != null  && !hasUsedCheat) {
-                Log.d("SHAKE", "isMyTurn = $isMyTurn, username = $username, myPosition = $myPosition")
-
                 hasUsedCheat = true
 
                 coroutineScope.launch {
@@ -360,7 +357,9 @@ fun GameScreen(
                     TicketBar(
                         tickets = myTickets,
                         onVideoPlaybackRequested = {
+                            if(!isEasterEggActive){
                             showVideo = true // Diese Logik bleibt im GameScreen
+                                }
                         }
                     )
                 }
@@ -1619,13 +1618,13 @@ fun TicketWithCount(
         "DOUBLE"      -> R.drawable.ticket_double
         else          -> null
     }
-
+        var eggUnlocked by remember { mutableStateOf(false) }
     ticketRes?.let { resId ->
 
         // ───────── Easter Egg States ─────────
         var clickCount by remember { mutableIntStateOf(0) }
         var lastClickTime by remember { mutableLongStateOf(0L) }
-        var eggUnlocked by remember { mutableStateOf(false) }
+
 
         // ───────── Responsive Grundgrößen ─────────
         val screenWidthDp = LocalConfiguration.current.screenWidthDp

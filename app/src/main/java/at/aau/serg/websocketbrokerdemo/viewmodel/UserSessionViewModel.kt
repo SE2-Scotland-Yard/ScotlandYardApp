@@ -7,7 +7,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import at.aau.serg.websocketbrokerdemo.model.Avatar
-import at.aau.serg.websocketbrokerdemo.model.Avatar_M
+import at.aau.serg.websocketbrokerdemo.model.AvatarM
 import com.example.myapplication.R
 
 class UserSessionViewModel : ViewModel() {
@@ -32,7 +32,7 @@ class UserSessionViewModel : ViewModel() {
             R.drawable.botm
 
         } else {
-            Avatar_M.fromId((avatarIds[playerName] ?: 1))?.drawableRes ?: R.drawable.bear
+            AvatarM.fromId((avatarIds[playerName] ?: 1))?.drawableRes ?: R.drawable.bear
         }
     }
 
