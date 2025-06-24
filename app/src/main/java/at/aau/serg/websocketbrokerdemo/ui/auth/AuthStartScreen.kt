@@ -84,7 +84,7 @@ fun AuthStartScreen(
             .background(Color.White)
     ) {
         VideoPlayerComposable(
-            videoUri = "file:///android_asset/ScotlandYardStart2.mp4",  // WICHTIG: MIT `.mp4`-Endung!
+            videoUri = "file:///android_asset/ScotlandYardStart.mp4",  // WICHTIG: MIT `.mp4`-Endung!
             modifier = Modifier.fillMaxWidth(),
             looping = false
         )

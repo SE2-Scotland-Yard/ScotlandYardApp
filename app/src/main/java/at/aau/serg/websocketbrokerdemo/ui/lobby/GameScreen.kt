@@ -11,6 +11,7 @@ import android.media.MediaPlayer
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RawRes
+import androidx.collection.emptyLongSet
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -85,6 +86,17 @@ import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.ui.auth.VideoPlayerComposable
 import androidx.compose.ui.unit.IntSize
 
+fun playSound(context: Context, @RawRes soundResId: Int) {
+    try {
+        val mediaPlayer = MediaPlayer.create(context, soundResId)
+        mediaPlayer?.apply {
+            setOnCompletionListener { mp -> mp.release() }
+            start()
+        }
+    } catch (e: Exception) {
+        Log.e("SoundPlayback", "Fehler beim Abspielen des Sounds: ${e.message}")
+    }
+}
 
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -134,6 +146,8 @@ fun GameScreen(
     val showCheatHint = remember { mutableStateOf(false) }
 
     var showLoadingOverlay by remember { mutableStateOf(true) }
+    var showVideo by remember { mutableStateOf(false) }
+    var isEasterEggActive by remember { mutableStateOf(false) }
 
 
     DisposableEffect(Unit) {
@@ -185,7 +199,6 @@ fun GameScreen(
             sensorManager.unregisterListener(shakeDetector)
         }
     }
-
 
 
 
@@ -308,7 +321,8 @@ fun GameScreen(
                 mrXPosition = mrXPosition,
                 gameUpdate = gameUpdate,
                 showCheatArrow = showCheatArrow,
-                mrxXY = mrxXY
+                mrxXY = mrxXY,
+                isEasterEggActive = isEasterEggActive
             )
 
             BottomBar(
@@ -343,7 +357,12 @@ fun GameScreen(
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 8.dp)
                 ) {
-                    TicketBar(tickets = myTickets)
+                    TicketBar(
+                        tickets = myTickets,
+                        onVideoPlaybackRequested = {
+                            showVideo = true // Diese Logik bleibt im GameScreen
+                        }
+                    )
                 }
             }
 
@@ -480,7 +499,8 @@ fun GameScreen(
                     currentPlayerRole = userSessionVm.role.value,
                     onDismiss = { navigateToLobby = true  },
                     userSessionVm = userSessionVm,
-                    playerPositions = gameUpdate?.playerPositions ?: emptyMap()
+                    playerPositions = gameUpdate?.playerPositions ?: emptyMap(),
+                    isEasterEggActive = isEasterEggActive
                 )
             }
 
@@ -550,9 +570,16 @@ fun GameScreen(
 
             val currentPlayer = gameUpdate?.currentPlayer
 
+
             currentPlayer?.let { playerName ->
-                val avatarRes = if (userSessionVm.isMrX(playerName)) R.drawable.mrx
-                else userSessionVm.getAvatarDrawableRes(playerName)
+
+                val avatarRes = if(isEasterEggActive){
+                    if (userSessionVm.isMrX(playerName)) R.drawable.mrxm
+                    else userSessionVm.getAvatarDrawableResm(playerName)
+                }else{
+                    if (userSessionVm.isMrX(playerName)) R.drawable.mrx
+                    else userSessionVm.getAvatarDrawableRes(playerName)
+                }
 
                 Box(
                     modifier = Modifier
@@ -655,6 +682,30 @@ fun GameScreen(
             }
         }
 
+        AnimatedVisibility(
+            visible = showVideo,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(), contentAlignment = Alignment.Center
+            ) {
+                VideoPlayerComposable(
+                    videoUri = "file:///android_asset/mine.mp4",
+                    modifier = Modifier.fillMaxWidth(),
+                    looping = false,
+                    onVideoEnd = {
+                        showVideo = false
+                    }
+                )
+                isEasterEggActive = true
+            }
+        }
+
     }
 }
 
@@ -752,7 +803,9 @@ fun Map(
     mrXPosition: Int?,
     gameUpdate: GameUpdate?,
     mrxXY: Pair<Float, Float>,
-    showCheatArrow: Boolean
+    showCheatArrow: Boolean,
+    isEasterEggActive : Boolean
+
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -920,7 +973,8 @@ fun Map(
                         mrXPosition     = mrXPosition,
                         gameUpdate      = gameUpdate,
                         scaleMapX       = scaleX,
-                        scaleMapY       = scaleY
+                        scaleMapY       = scaleY,
+                        isEasterEggActive = isEasterEggActive
                     )
 
                     if (showCheatArrow && username != null) {
@@ -1170,7 +1224,8 @@ private fun PlayerPositions(
     mrXPosition: Int?,
     gameUpdate: GameUpdate?,
     scaleMapX: Float,
-    scaleMapY: Float
+    scaleMapY: Float,
+    isEasterEggActive: Boolean = false
 ) {
     val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
 
@@ -1180,6 +1235,7 @@ private fun PlayerPositions(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val nudged = remember { mutableStateMapOf<String, Boolean>() }
+
 
 
 
@@ -1196,11 +1252,21 @@ private fun PlayerPositions(
         }
     }
 
+
     fun getIconForPlayer(name: String): Int {
-        return if (userSessionVm.isMrX(name)) {
-            R.drawable.mrx
+
+        return if (isEasterEggActive) {
+            when {
+                userSessionVm.isMrX(name) -> R.drawable.mrxm
+                else -> userSessionVm.getAvatarDrawableResm(name)
+            }
         } else {
-            userSessionVm.getAvatarDrawableRes(name)
+
+            if (userSessionVm.isMrX(name)) {
+                R.drawable.mrx
+            } else {
+                userSessionVm.getAvatarDrawableRes(name)
+            }
         }
     }
 
@@ -1313,7 +1379,7 @@ private fun PlayerPositions(
                     }
             ) {
                 Image(
-                    painter = painterResource(R.drawable.mrx_shadow),
+                    painter = painterResource(if(isEasterEggActive){R.drawable.mrxm_shadow}else{R.drawable.mrx_shadow}),
                     contentDescription = "Position von Mr. X (Schatten)",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
@@ -1332,7 +1398,7 @@ private fun PlayerPositions(
                 val yDp = with(density) { (animatedY * scaleMapY).toDp() }
 
                 Image(
-                    painter = painterResource(R.drawable.mrx),
+                    painter = painterResource(if(isEasterEggActive){R.drawable.mrxm}else{R.drawable.mrx}),
                     contentDescription = "Position von Mr.X",
                     modifier = Modifier
                         .size(iconSizeDp)
@@ -1353,7 +1419,8 @@ fun WinnerOverlay(
     currentPlayerRole: String?,
     onDismiss: () -> Unit,
     userSessionVm: UserSessionViewModel,
-    playerPositions: Map<String, Int>
+    playerPositions: Map<String, Int>,
+    isEasterEggActive : Boolean
 ) {
     val isMrXWinner = winner == "MR_X"
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
@@ -1401,7 +1468,7 @@ fun WinnerOverlay(
                 if (isMrXWinner) {
                     // Nur MrX Icon
                     Image(
-                        painter = painterResource(id = R.drawable.mrx),
+                        painter = painterResource(id = if(isEasterEggActive){R.drawable.mrx}else{R.drawable.mrx_shadow}),
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
                         contentScale = ContentScale.Fit
@@ -1412,7 +1479,7 @@ fun WinnerOverlay(
                         .filterNot { userSessionVm.isMrX(it) }
                         .forEach { player ->
                             Image(
-                                painter = painterResource(id = userSessionVm.getAvatarDrawableRes(player)),
+                                painter = painterResource(id = if(isEasterEggActive){userSessionVm.getAvatarDrawableResm(player)}else{userSessionVm.getAvatarDrawableRes(player)} ),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(64.dp)
@@ -1486,7 +1553,11 @@ fun TicketImage(ticket: String) {
 
 @SuppressLint("UseOfNonLambdaOffsetOverload")
 @Composable
-fun TicketBar(tickets: Map<String, Int>) {
+fun TicketBar(
+    tickets: Map<String, Int>,
+    onVideoPlaybackRequested: (() -> Unit)? = null
+    )
+    {
 
     var anyPressed by remember { mutableStateOf(false) }
 
@@ -1517,7 +1588,8 @@ fun TicketBar(tickets: Map<String, Int>) {
                     enlargeAll   = anyPressed,
                     onPressChanged = { pressed ->
                         anyPressed = pressed
-                    }
+                    },
+                    onVideoPlaybackRequested = onVideoPlaybackRequested
                 )
             }
         }
@@ -1534,8 +1606,10 @@ fun TicketWithCount(
     count: Int,
     modifier: Modifier = Modifier,
     enlargeAll: Boolean = false,
-    onPressChanged: ((Boolean) -> Unit)? = null
+    onPressChanged: ((Boolean) -> Unit)? = null,
+    onVideoPlaybackRequested: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     // ───────── Ticket-Grafik wählen ─────────
     val ticketRes = when (ticket.uppercase()) {
         "TAXI"        -> R.drawable.ticket_taxi
@@ -1608,10 +1682,18 @@ fun TicketWithCount(
                             val now = System.currentTimeMillis()
                             if (now - lastClickTime <= 3000) {
                                 clickCount++
-                                if (clickCount >= 10 && !eggUnlocked) {
+                                if (clickCount in 6..6 && !eggUnlocked) {
+                                    playSound(context, R.raw.v1)
+                                }
+                                if (clickCount in 9..9 && !eggUnlocked) {
+                                    playSound(context, R.raw.v2)
+                                }
+                                if (clickCount in 12..12 && !eggUnlocked) {
+                                    playSound(context, R.raw.v3)
+                                }
+                                if (clickCount >= 15 && !eggUnlocked) {
+                                    onVideoPlaybackRequested?.invoke()
                                     eggUnlocked = true
-                                    println("Easter Egg unlocked!")
-
                                 }
                             } else {
                                 clickCount = 1
