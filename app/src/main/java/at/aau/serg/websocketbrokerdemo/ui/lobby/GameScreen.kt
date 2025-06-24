@@ -285,17 +285,38 @@ fun GameScreen(
 
 
     Scaffold { paddingValues ->
-        Image(
-            modifier = Modifier.fillMaxSize(),
-            painter = painterResource(R.drawable.background1),
-            contentDescription = "background",
-            contentScale = ContentScale.Crop
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Hintergrundbild
+            Image(
+                modifier = Modifier.fillMaxSize(),
+                painter = painterResource(R.drawable.background3),
+                contentDescription = "background",
+                contentScale = ContentScale.Crop
+            )
+
+
+            val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomStart
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.avatarbottombar),
+                    contentDescription = "avatar detective",
+                    modifier = Modifier
+                        .padding(start = screenWidth * 0.1f)
+                        .size(100.dp)
+                )
+            }
+        }
+
+        // Haupt-UI mit Map etc.
         Box(
             modifier = Modifier
                 .padding(paddingValues)
+                .fillMaxSize()
         ) {
-
             Map(
                 gameVm = gameVm,
                 useSmallMap = useSmallMap,
@@ -1174,20 +1195,16 @@ private fun PlayerPositions(
 ) {
     val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
 
-
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     var previousMrXShadowPosition by remember { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val nudged = remember { mutableStateMapOf<String, Boolean>() }
 
-
-
     fun playSound(context: Context, @RawRes soundResId: Int) {
         try {
             val mediaPlayer = MediaPlayer.create(context, soundResId)
             mediaPlayer?.apply {
-                setOnCompletionListener { mp -> mp.release() }
                 setOnCompletionListener { mp -> mp.release() }
                 start()
             }
@@ -1204,8 +1221,10 @@ private fun PlayerPositions(
         }
     }
 
+    // Spieler anzeigen
     playerPositions.forEach { (playerName, positionId) ->
-        if (userSessionVm.isMrX(playerName)) return@forEach
+        val isSelf = playerName == userSessionVm.username.value
+        val isShadow = playerName == "mrX_shadow"
 
         points[positionId]?.let { (xPx, yPx) ->
             val animatedX by animateFloatAsState(
@@ -1250,15 +1269,19 @@ private fun PlayerPositions(
                     }
                     .background(glowColor.copy(alpha = 0.4f), CircleShape)
                     .size(iconSizeDp)
-                    .clickable {
-                        if (nudged[playerName] != true) {
-                            nudged[playerName] = true
-                            coroutineScope.launch {
-                                delay(800)
-                                nudged[playerName] = false
+                    .then(
+                        if (!isSelf && !isShadow) {
+                            Modifier.clickable {
+                                if (nudged[playerName] != true) {
+                                    nudged[playerName] = true
+                                    coroutineScope.launch {
+                                        delay(800)
+                                        nudged[playerName] = false
+                                    }
+                                }
                             }
-                        }
-                    }
+                        } else Modifier
+                    )
                     .zIndex(1f)
             ) {
                 Image(
@@ -1275,6 +1298,7 @@ private fun PlayerPositions(
         }
     }
 
+    // MrX-Schatten (für andere Spieler sichtbar)
     playerPositions[userSessionVm.getMrXName()]?.let { positionId ->
         LaunchedEffect(positionId) {
             if (previousMrXShadowPosition != null && previousMrXShadowPosition != positionId) {
@@ -1302,15 +1326,6 @@ private fun PlayerPositions(
                 modifier = Modifier
                     .offset(xDp - (iconSizeDp * 1.2f) / 2 + nudgeX, yDp - (iconSizeDp * 1.2f) / 2)
                     .size(iconSizeDp)
-                    .clickable {
-                        if (nudged["mrX_shadow"] != true) {
-                            nudged["mrX_shadow"] = true
-                            coroutineScope.launch {
-                                delay(800)
-                                nudged["mrX_shadow"] = false
-                            }
-                        }
-                    }
             ) {
                 Image(
                     painter = painterResource(R.drawable.mrx_shadow),
@@ -1322,6 +1337,7 @@ private fun PlayerPositions(
         }
     }
 
+    // MrX echte Position (nur sichtbar für MrX selbst)
     if (userSessionVm.role.value == "MRX") {
         mrXPosition?.let { positionId ->
             points[positionId]?.let { (xPx, yPx) ->
@@ -1339,11 +1355,11 @@ private fun PlayerPositions(
                         .offset(xDp - iconSizeDp / 2, yDp - iconSizeDp / 2),
                     contentScale = ContentScale.Fit
                 )
-
             }
         }
     }
 }
+
 
 
 
