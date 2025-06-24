@@ -17,7 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import at.aau.serg.websocketbrokerdemo.ui.OfflineStatusHandler
 import at.aau.serg.websocketbrokerdemo.viewmodel.LobbyViewModel
 import at.aau.serg.websocketbrokerdemo.viewmodel.UserSessionViewModel
-import kotlinx.coroutines.launch
+
 
 class LobbyActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,12 +80,10 @@ class LobbyActivity : ComponentActivity() {
                 }
 
                 LobbyScreenType.Join -> OfflineStatusHandler(isOffline = isOffline) {
-                    val coroutineScope = rememberCoroutineScope()
                     JoinLobbyScreen(
                         onJoin = { id ->
                             val username = userSessionVm.username.value.orEmpty()
-                            coroutineScope.launch {
-                                val result = lobbyVm.tryJoinLobby(id, username, this@LobbyActivity)
+                            lobbyVm.tryJoinLobby(id, username, this@LobbyActivity) { result ->
                                 if (result.isNotBlank()) {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live
@@ -104,12 +102,11 @@ class LobbyActivity : ComponentActivity() {
                 }
 
                 LobbyScreenType.Public -> OfflineStatusHandler(isOffline = isOffline) {
-                    val coroutineScope = rememberCoroutineScope()
+
                     PublicLobbiesScreen(
                         onSelect = { id ->
                             val username = userSessionVm.username.value.orEmpty()
-                            coroutineScope.launch {
-                                val result = lobbyVm.tryJoinLobby(id, username, this@LobbyActivity)
+                            lobbyVm.tryJoinLobby(id, username, this@LobbyActivity) { result ->
                                 if (result.isNotBlank()) {
                                     selectedGameId = id
                                     currentScreen = LobbyScreenType.Live
@@ -121,6 +118,7 @@ class LobbyActivity : ComponentActivity() {
                                     ).show()
                                 }
                             }
+
                         },
                         onBack = { currentScreen = LobbyScreenType.Menu },
                         snackbarHostState = snackbarHostState

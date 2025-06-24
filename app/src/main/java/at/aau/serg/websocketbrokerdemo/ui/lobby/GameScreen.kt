@@ -124,7 +124,7 @@ fun GameScreen(
     var showMrXHistory by remember { mutableStateOf(false) }
     var mrXHistory by remember { mutableStateOf<List<String>>(emptyList()) }
     var visibleTicket by remember { mutableStateOf<String?>(null) }
-    var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
 
     val myPosition = gameUpdate?.playerPositions?.get(username)
     val context = LocalContext.current
@@ -200,9 +200,7 @@ fun GameScreen(
         }
     }
 
-    LaunchedEffect(playerPositions) {
-        previousPlayerPositions = playerPositions
-    }
+
 
     // Moves nach dem Join laden
     LaunchedEffect(gameId, username) {
@@ -1231,16 +1229,27 @@ private fun PlayerPositions(
 ) {
     val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
 
-    var previousPlayerPositions by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
-    var lastMrXPosition by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var previousMrXShadowPosition by remember { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val nudged = remember { mutableStateMapOf<String, Boolean>() }
 
-    LaunchedEffect(playerPositions) {
-        previousPlayerPositions = playerPositions
+
+
+
+    fun playSound(context: Context, @RawRes soundResId: Int) {
+        try {
+            val mediaPlayer = MediaPlayer.create(context, soundResId)
+            mediaPlayer?.apply {
+                setOnCompletionListener { mp -> mp.release() }
+                setOnCompletionListener { mp -> mp.release() }
+                start()
+            }
+        } catch (e: Exception) {
+            Log.e("SoundPlayback", "Fehler beim Abspielen des Sounds: ${e.message}")
+        }
     }
 
 
@@ -1397,9 +1406,6 @@ private fun PlayerPositions(
                     contentScale = ContentScale.Fit
                 )
 
-                LaunchedEffect(positionId) {
-                    lastMrXPosition = xPx.toFloat() to yPx.toFloat()
-                }
             }
         }
     }
@@ -1420,11 +1426,7 @@ fun WinnerOverlay(
     val isCurrentPlayerMrX = currentPlayerRole == "MRX"
 
 
-    val backgroundColor = when {
-        isMrXWinner && isCurrentPlayerMrX -> Color(0xFF4CAF50)
-        !isMrXWinner && !isCurrentPlayerMrX -> Color(0xFF4CAF50)
-        else -> Color(0xFFF44336)
-    }
+    val backgroundColor = getBackgroundColor(isMrXWinner, isCurrentPlayerMrX)
 
     val title = when {
         isMrXWinner && isCurrentPlayerMrX -> "Mr. X hat gewonnen!"
@@ -1523,6 +1525,11 @@ fun WinnerOverlay(
 
 }
 
+private fun getBackgroundColor(isMrXWinner: Boolean, isCurrentPlayerMrX: Boolean): Color {
+    return if (isMrXWinner == isCurrentPlayerMrX) Color(0xFF4CAF50) else Color(0xFFF44336)
+}
+
+
 @Composable
 fun TicketImage(ticket: String) {
     val ticketRes = when (ticket.uppercase()) {
@@ -1616,8 +1623,8 @@ fun TicketWithCount(
     ticketRes?.let { resId ->
 
         // ───────── Easter Egg States ─────────
-        var clickCount by remember { mutableStateOf(0) }
-        var lastClickTime by remember { mutableStateOf(0L) }
+        var clickCount by remember { mutableIntStateOf(0) }
+        var lastClickTime by remember { mutableLongStateOf(0L) }
         var eggUnlocked by remember { mutableStateOf(false) }
 
         // ───────── Responsive Grundgrößen ─────────
@@ -1637,7 +1644,7 @@ fun TicketWithCount(
         val badgePaddingV = ticketWidth * 0.06f
 
         // ───────── Animations-States ─────────
-        var previousCount by remember { mutableStateOf(count) }
+        var previousCount by remember { mutableIntStateOf(count) }
         var animateScale  by remember { mutableStateOf(false) }
         var isPressed     by remember { mutableStateOf(false) }
 
@@ -1743,6 +1750,7 @@ fun TicketWithCount(
 
 
 
+@SuppressLint("UnusedTransitionTargetStateParameter")
 @Composable
 fun ExpandableTicketStackAnimated(
     gameVm: GameViewModel,
@@ -1768,7 +1776,8 @@ fun ExpandableTicketStackAnimated(
     val transition = updateTransition(expanded, label = "ticket_expand")
 
     val blackX  by transition.animateDp(label = "blackX")  { if (it) 0.dp else offsetShort }
-    val blackY  by transition.animateDp(label = "blackY")  { if (it) 0.dp else 0.dp }
+    val blackY by transition.animateDp(label = "blackY") { 0.dp }
+
     val blackRot by transition.animateFloat(label = "blackRot") { if (it) 0f else -15f }
 
     val doubleX by transition.animateDp(label = "doubleX") { if (it) offsetLong else offsetShort }

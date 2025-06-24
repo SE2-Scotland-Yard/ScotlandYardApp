@@ -2,6 +2,8 @@ package at.aau.serg.websocketbrokerdemo.websocket
 
 import android.content.Context
 import android.util.Log
+import at.aau.serg.websocketbrokerdemo.core.coroutines.CoroutineDispatcherProvider
+import at.aau.serg.websocketbrokerdemo.core.coroutines.DefaultDispatcherProvider
 import at.aau.serg.websocketbrokerdemo.data.model.GameUpdate
 import at.aau.serg.websocketbrokerdemo.data.model.LobbyState
 import com.google.gson.Gson
@@ -15,7 +17,7 @@ import org.hildan.krossbow.stomp.subscribeText
 import org.hildan.krossbow.websocket.okhttp.OkHttpWebSocketClient
 import org.json.JSONObject
 
-class StompManager {
+class StompManager(private val dispatcherProvider: CoroutineDispatcherProvider = DefaultDispatcherProvider()) {
 
     companion object {
         private const val WS_URL = "ws://se2-demo.aau.at:53215/ws-stomp"
@@ -48,7 +50,7 @@ class StompManager {
                 stompSession = client.connect(WS_URL)
                 Log.d("STOMP", "WebSocket connected to $WS_URL")
 
-                withContext(Dispatchers.Main) { onConnected() }
+                withContext(dispatcherProvider.main) { onConnected() }
 
                 launch {
                     stompSession?.subscribeText("/topic/lobby/$gameId")?.collect { message ->
@@ -70,7 +72,7 @@ class StompManager {
                 launch {
                     stompSession?.subscribeText("/topic/game/$gameId/system")?.collect { message ->
                         Log.d("STOMP", "System-Message: $message")
-                        withContext(Dispatchers.Main) {
+                        withContext(dispatcherProvider.main) {
                             onSystemMessage(message)
                             systemMessageHandler?.invoke(message)
                         }
@@ -82,7 +84,7 @@ class StompManager {
                         Log.d("STOMP", "Error-Message: $message")
                         val json = JSONObject(message)
                         val errorText = json.optString("error", "Unbekannter Fehler")
-                        withContext(Dispatchers.Main) {
+                        withContext(dispatcherProvider.main) {
                             onErrorMessage(errorText)
                         }
                     }
