@@ -1195,16 +1195,20 @@ private fun PlayerPositions(
 ) {
     val iconSizeDp = (60f / gameVm.scale).dp.coerceIn(16.dp, 40.dp)
 
+
     var lastPlayerPositions by remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     var previousMrXShadowPosition by remember { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val nudged = remember { mutableStateMapOf<String, Boolean>() }
 
+
+
     fun playSound(context: Context, @RawRes soundResId: Int) {
         try {
             val mediaPlayer = MediaPlayer.create(context, soundResId)
             mediaPlayer?.apply {
+                setOnCompletionListener { mp -> mp.release() }
                 setOnCompletionListener { mp -> mp.release() }
                 start()
             }
@@ -1221,10 +1225,8 @@ private fun PlayerPositions(
         }
     }
 
-    // Spieler anzeigen
     playerPositions.forEach { (playerName, positionId) ->
-        val isSelf = playerName == userSessionVm.username.value
-        val isShadow = playerName == "mrX_shadow"
+        if (userSessionVm.isMrX(playerName)) return@forEach
 
         points[positionId]?.let { (xPx, yPx) ->
             val animatedX by animateFloatAsState(
@@ -1270,18 +1272,19 @@ private fun PlayerPositions(
                     .background(glowColor.copy(alpha = 0.4f), CircleShape)
                     .size(iconSizeDp)
                     .then(
-                        if (!isSelf && !isShadow) {
+                        if (playerName != userSessionVm.username.value) {
                             Modifier.clickable {
                                 if (nudged[playerName] != true) {
                                     nudged[playerName] = true
                                     coroutineScope.launch {
-                                        delay(800)
+                                        delay(2000)
                                         nudged[playerName] = false
                                     }
                                 }
                             }
                         } else Modifier
                     )
+
                     .zIndex(1f)
             ) {
                 Image(
@@ -1298,7 +1301,6 @@ private fun PlayerPositions(
         }
     }
 
-    // MrX-Schatten (für andere Spieler sichtbar)
     playerPositions[userSessionVm.getMrXName()]?.let { positionId ->
         LaunchedEffect(positionId) {
             if (previousMrXShadowPosition != null && previousMrXShadowPosition != positionId) {
@@ -1326,6 +1328,7 @@ private fun PlayerPositions(
                 modifier = Modifier
                     .offset(xDp - (iconSizeDp * 1.2f) / 2 + nudgeX, yDp - (iconSizeDp * 1.2f) / 2)
                     .size(iconSizeDp)
+
             ) {
                 Image(
                     painter = painterResource(R.drawable.mrx_shadow),
@@ -1337,7 +1340,6 @@ private fun PlayerPositions(
         }
     }
 
-    // MrX echte Position (nur sichtbar für MrX selbst)
     if (userSessionVm.role.value == "MRX") {
         mrXPosition?.let { positionId ->
             points[positionId]?.let { (xPx, yPx) ->
@@ -1355,6 +1357,7 @@ private fun PlayerPositions(
                         .offset(xDp - iconSizeDp / 2, yDp - iconSizeDp / 2),
                     contentScale = ContentScale.Fit
                 )
+
             }
         }
     }
